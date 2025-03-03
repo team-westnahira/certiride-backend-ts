@@ -9,6 +9,7 @@ CREATE TABLE `VehicleOwner` (
     `email` VARCHAR(191) NOT NULL,
     `password` VARCHAR(191) NOT NULL,
     `verificationStatus` BOOLEAN NOT NULL,
+    `otp` VARCHAR(191) NOT NULL,
     `DateRegistered` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `VehicleOwner_phone_key`(`phone`),
