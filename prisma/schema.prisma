@@ -26,3 +26,11 @@ model VehicleOwner {
   otp                String
   DateRegistered     DateTime
 }
+
+model AuditLog {
+  eventId   Int      @id @default(autoincrement())
+  date      DateTime @default(now())
+  userId    Int
+  eventType String
+  content   Json
+}

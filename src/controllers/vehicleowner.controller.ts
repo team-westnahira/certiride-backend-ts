@@ -5,7 +5,15 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   const users = await prisma.vehicleOwner.findMany();
-  res.json(users);
+  
+  const mockUser:{username: string , age : number}[] = [
+    {username : 'naveen' , age : 20},
+    {username : 'naveen dhananjaya' , age : 23},
+    {username : 'haritha senadheera' , age : 24},
+  ]
+  
+  res.json(mockUser);
 });
+
 
 export default router;
