@@ -58,6 +58,7 @@ model Mechanic{
 model AuthToken{
   tokenId Int @id @default(autoincrement())
   tokenValue String @unique
+  userId Int
   userRole String
   tokenType String
   ipAddress String
@@ -68,12 +69,38 @@ model AuthToken{
 model Notification{
   notificationId Int @id @default(autoincrement())
   notificationType String
+  userId Int
+  userRole String
   content Json
   date DateTime
   read Boolean
 }
 
+model Vehicle{
+  vehicleId Int @id @default(autoincrement())
+  vin String @unique
+  ownerId Int
+  manufacture String
+  model String
+  year DateTime
+}
 
+model Report{
+  reportId Int @id @default(autoincrement())
+  ownerId Int
+  genaratedDate DateTime
+  reportType String
+}
 
+model Dispute{
+  disputeId Int @id @default(autoincrement())
+  serviceDate DateTime
+  serviceType String
+  ownerId Int
+  mechanicId Int
+  status Boolean
+  reviewedBy Int
+  discription String
+}
 
 
