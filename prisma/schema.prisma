@@ -34,3 +34,7 @@ model AuditLog {
   eventType String
   content   Json
 }
+
+model Admin {
+
+}
