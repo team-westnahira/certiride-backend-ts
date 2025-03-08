@@ -77,7 +77,7 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
                 password: hashedPassword,
                 verificationStatus: false,
                 otp: generateOtp(),
-                DateRegistered: new Date()
+                dateRegistered: new Date()
             },
         });
 
