@@ -3,7 +3,7 @@ import prisma from "../config/prisma";
 export const addAuditLog = async (userId:number , eventType: string , content:string) => {
 
   try{
-    const recode = await prisma.auditLog.create({
+    await prisma.auditLog.create({
       data: {
         date :  new Date(),
         userId:  userId,
