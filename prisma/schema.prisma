@@ -24,7 +24,7 @@ model VehicleOwner {
   password           String
   verificationStatus Boolean
   otp                String
-  DateRegistered     DateTime
+  dateRegistered     DateTime
 }
 
 model AuditLog {
@@ -36,5 +36,44 @@ model AuditLog {
 }
 
 model Admin {
-
+  adminId Int      @id @default(autoincrement())
+  name    String
+  email String   @unique
+  password String
+  role String
 }
+model Mechanic{
+  mechanicId Int      @id @default(autoincrement())
+  name    String
+  email String   @unique
+  password String
+  nic String   @unique
+  cid String   @unique
+  phone String @unique
+  dateRegistered     DateTime
+  specialization String
+  verificationStatus Boolean
+}
+
+model AuthToken{
+  tokenId Int @id @default(autoincrement())
+  tokenValue String @unique
+  userRole String
+  tokenType String
+  ipAddress String
+  deviceInfo String
+  expirationTime DateTime
+       
+}
+model Notification{
+  notificationId Int @id @default(autoincrement())
+  notificationType String
+  content Json
+  date DateTime
+  read Boolean
+}
+
+
+
+
+
