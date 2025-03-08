@@ -1,5 +1,6 @@
 import express from "express";
 import prisma from "../config/prisma";
+import { addAuditLog } from "../services/auditlog.service";
 
 const router = express.Router();
 
@@ -22,6 +23,11 @@ router.get('/get-all', async (req, res) => {
 
         const totalCount = await prisma.auditLog.count();
 
+        addAuditLog(1 , "userLogin" , JSON.stringify({
+            "userId" : 1,
+            "username" : "naveen"
+        }))
+        
         res.json({
             totalRecords: totalCount,
             currentPage: page,
