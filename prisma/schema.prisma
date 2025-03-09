@@ -36,71 +36,70 @@ model AuditLog {
 }
 
 model Admin {
-  adminId Int      @id @default(autoincrement())
-  name    String
-  email String   @unique
+  adminId  Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
   password String
-  role String
+  role     String
 }
-model Mechanic{
-  mechanicId Int      @id @default(autoincrement())
-  name    String
-  email String   @unique
-  password String
-  nic String   @unique
-  cid String   @unique
-  phone String @unique
+
+model Mechanic {
+  mechanicId         Int      @id @default(autoincrement())
+  name               String
+  email              String   @unique
+  password           String
+  nic                String   @unique
+  cid                String   @unique
+  phone              String   @unique
   dateRegistered     DateTime
-  specialization String
+  specialization     String
   verificationStatus Boolean
 }
 
-model AuthToken{
-  tokenId Int @id @default(autoincrement())
-  tokenValue String @unique
-  userId Int
-  userRole String
-  tokenType String
-  ipAddress String
-  deviceInfo String
+model AuthToken {
+  tokenId        Int      @id @default(autoincrement())
+  tokenValue     String   @unique
+  userId         Int
+  userRole       String
+  tokenType      String
+  ipAddress      String
+  deviceInfo     String
   expirationTime DateTime
-       
 }
-model Notification{
-  notificationId Int @id @default(autoincrement())
+
+model Notification {
+  notificationId   Int      @id @default(autoincrement())
   notificationType String
-  userId Int
-  userRole String
-  content Json
-  date DateTime
-  read Boolean
+  userId           Int
+  userRole         String
+  content          Json
+  date             DateTime
+  read             Boolean
 }
 
-model Vehicle{
-  vehicleId Int @id @default(autoincrement())
-  vin String @unique
-  ownerId Int
+model Vehicle {
+  vehicleId   Int      @id @default(autoincrement())
+  vin         String   @unique
+  ownerId     Int
   manufacture String
-  model String
-  year DateTime
+  model       String
+  year        DateTime
 }
 
-model Report{
-  reportId Int @id @default(autoincrement())
-  ownerId Int
+model Report {
+  reportId      Int      @id @default(autoincrement())
+  ownerId       Int
   genaratedDate DateTime
-  reportType String
+  reportType    String
 }
 
-model Dispute{
-  disputeId Int @id @default(autoincrement())
+model Dispute {
+  disputeId   Int      @id @default(autoincrement())
   serviceDate DateTime
   serviceType String
-  ownerId Int
-  mechanicId Int
-  status Boolean
-  reviewedBy Int
+  ownerId     Int
+  mechanicId  Int
+  status      Boolean
+  reviewedBy  Int
   discription String
 }
-
-
