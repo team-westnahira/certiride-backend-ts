@@ -2,8 +2,11 @@ import express, { Request, Response } from "express";
 import prisma from "../config/prisma";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 import { generateOtp } from "../utils/otpGenerator";
 
+dotenv.config();
 const router = express.Router();
 
 router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
@@ -98,6 +101,76 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
         console.error(err);
         res.status(500).json({ error: "Internal server error!" });
         return;
+    }
+});
+
+// Define a TypeScript type for the request body
+interface LoginRequestBody {
+    email: string;
+    password: string;
+}
+
+// Login Route
+router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
+    try {
+        // Validate request body
+        const vehicleOwnerLoginSchema = z.object({
+            email: z.string().email("Invalid email address"),
+            password: z.string().min(6, "Password must be at least 6 characters long"),
+        });
+
+        const parsedData = vehicleOwnerLoginSchema.safeParse(req.body);
+        if (!parsedData.success) {
+            res.status(400).json({
+                error: "Validation failed",
+                issues: parsedData.error.errors,
+            });
+            return
+        }
+
+        const { email, password } = parsedData.data;
+
+        // Check if user exists
+        const user = await prisma.vehicleOwner.findUnique({ where: { email } });
+
+        if (!user) {
+            res.status(401).json({ error: "Invalid credentials" });
+            return
+        }
+
+        // Verify password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            res.status(401).json({ error: "Invalid credentials" });
+            return
+        }
+
+        // Generate JWT token
+        
+        const secretKey = process.env.JWT_SECRET as string;
+        if (!secretKey) {
+        throw new Error("JWT_SECRET is not defined in environment variables");
+        }
+
+        const token = jwt.sign(
+            { id: user.id, email: user.email },
+            secretKey,  // Ensure this is a string
+            { expiresIn: "1h" }  // Fix 'expiresIn' error
+        );
+
+        res.json({
+            message: "Login successful",
+            token,
+            user: {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error!" });
     }
 });
 
