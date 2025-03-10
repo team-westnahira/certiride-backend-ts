@@ -58,7 +58,7 @@ model Mechanic {
 
 model AuthToken {
   tokenId        Int      @id @default(autoincrement())
-  tokenValue     String   @unique @db.VarChar(1024)
+  tokenValue     String   @unique @db.VarChar(512)
   userId         Int
   userRole       String
   tokenType      String
