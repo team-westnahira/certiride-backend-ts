@@ -1,15 +1,16 @@
-import express, { Request, Response } from "express";
-import prisma from "../config/prisma";
-import { z } from "zod";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import express, { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
+import prisma from "../config/prisma";
 import { generateOtp } from "../utils/otpGenerator";
 
 dotenv.config();
 const router = express.Router();
 
 router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
+    
     try {
         const vehicleOwnerRegisterSchema = z.object({
             firstName: z.string().min(1, "First name is required"),
@@ -78,7 +79,7 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
                 nic,
                 email,
                 password: hashedPassword,
-                verificationStatus: false,
+                verificationStatus: true,
                 otp: generateOtp(),
                 dateRegistered: new Date()
             },
@@ -102,6 +103,7 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
         res.status(500).json({ error: "Internal server error!" });
         return;
     }
+
 });
 
 // Login Route
@@ -222,6 +224,15 @@ router.get('/vehicle-owner/current-user', async (req: Request, res: Response) =>
             return
         }
 
+        const savedToken = await prisma.authToken.findUnique({
+            where: { tokenValue: token }
+        });
+
+        if(!savedToken) {
+            res.status(401).json({ error: "Unauthorized: Invalid token" });
+            return
+        }
+
         // Fetch user details
         const user = await prisma.vehicleOwner.findUnique({
             where: { id: +decoded.id },
@@ -270,6 +281,15 @@ router.get('/vehicle-owner/logout', async (req: Request, res: Response) => {
         }
 
         const token = authHeader.split(" ")[1];
+
+        const savedToken = await prisma.authToken.findUnique({
+            where: { tokenValue: token }
+        });
+
+        if(!savedToken) {
+            res.status(401).json({ error: "Unauthorized: Invalid token" });
+            return
+        }
 
         // Remove token from database
         await prisma.authToken.deleteMany({

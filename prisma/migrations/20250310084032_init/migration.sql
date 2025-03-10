@@ -1,13 +1,33 @@
-/*
-  Warnings:
+-- CreateTable
+CREATE TABLE `VehicleOwner` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `firstName` VARCHAR(191) NOT NULL,
+    `lastName` VARCHAR(191) NOT NULL,
+    `address` VARCHAR(191) NOT NULL,
+    `phone` VARCHAR(191) NOT NULL,
+    `nic` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `password` VARCHAR(191) NOT NULL,
+    `verificationStatus` BOOLEAN NOT NULL,
+    `otp` VARCHAR(191) NOT NULL,
+    `dateRegistered` DATETIME(3) NOT NULL,
 
-  - You are about to drop the column `DateRegistered` on the `vehicleowner` table. All the data in the column will be lost.
-  - Added the required column `dateRegistered` to the `VehicleOwner` table without a default value. This is not possible if the table is not empty.
+    UNIQUE INDEX `VehicleOwner_phone_key`(`phone`),
+    UNIQUE INDEX `VehicleOwner_nic_key`(`nic`),
+    UNIQUE INDEX `VehicleOwner_email_key`(`email`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-*/
--- AlterTable
-ALTER TABLE `vehicleowner` DROP COLUMN `DateRegistered`,
-    ADD COLUMN `dateRegistered` DATETIME(3) NOT NULL;
+-- CreateTable
+CREATE TABLE `AuditLog` (
+    `eventId` INTEGER NOT NULL AUTO_INCREMENT,
+    `date` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `userId` INTEGER NOT NULL,
+    `eventType` VARCHAR(191) NOT NULL,
+    `content` JSON NOT NULL,
+
+    PRIMARY KEY (`eventId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Admin` (
@@ -44,7 +64,7 @@ CREATE TABLE `Mechanic` (
 -- CreateTable
 CREATE TABLE `AuthToken` (
     `tokenId` INTEGER NOT NULL AUTO_INCREMENT,
-    `tokenValue` VARCHAR(191) NOT NULL,
+    `tokenValue` VARCHAR(1024) NOT NULL,
     `userId` INTEGER NOT NULL,
     `userRole` VARCHAR(191) NOT NULL,
     `tokenType` VARCHAR(191) NOT NULL,

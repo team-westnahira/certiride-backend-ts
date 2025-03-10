@@ -1,12 +1,9 @@
-import request from "supertest";
-import app from "../server";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import prisma from "../config/prisma";
 import { execSync } from "child_process";
-
-
-let connection:any
+import jwt from "jsonwebtoken";
+import request from "supertest";
+import prisma from "../config/prisma";
+import app from "../server";
 
 process.env.JWT_SECRET = "testsecret";
 
@@ -20,8 +17,6 @@ describe("Vehicle Owner Authentication Routes", () => {
 
         process.env.DATABASE_URL = "file:./test.db?mode=memory";
         await execSync('npx prisma db push');
-
-
 
         await prisma.authToken.deleteMany();
         await prisma.vehicleOwner.deleteMany();
@@ -69,7 +64,7 @@ describe("Vehicle Owner Authentication Routes", () => {
             server.on('listening', resolve);
         });
 
-    } , 30000);
+    }, 30000);
 
     afterAll(async () => {
 
@@ -127,8 +122,8 @@ describe("Vehicle Owner Authentication Routes", () => {
         const response = await request(app)
             .post("/api/v1/auth/vehicle-owner/login")
             .send({
-                email: "testuser@example.com",
-                password: "password123",
+                email: "alice@example.com",
+                password: "securepass",
                 deviceInfo: "Test Device",
             });
 
@@ -151,14 +146,35 @@ describe("Vehicle Owner Authentication Routes", () => {
     });
 
     test("Should fetch the current user", async () => {
+        await prisma.authToken.deleteMany();
+
+        const loginResponse = await request(app)
+            .post("/api/v1/auth/vehicle-owner/login")
+            .send({
+                email: "alice@example.com",
+                password: "securepass",
+                deviceInfo: "Test Device",
+            });
+    
+        expect(loginResponse.status).toBe(200);
+        
+        const token = loginResponse.body.token
+    
+        const savedToken = await prisma.authToken.findUnique({
+            where: { tokenValue: token },
+        });
+    
+        expect(savedToken).not.toBeNull();
+    
         const response = await request(app)
             .get("/api/v1/auth/vehicle-owner/current-user")
-            .set("Authorization", `Bearer ${authToken}`);
-
+            .set("Authorization", `Bearer ${token}`);
+    
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty("user");
-        expect(response.body.user).toHaveProperty("email", testUser.email);
+        expect(response.body.user).toHaveProperty("email", "alice@example.com");
     });
+    
 
     test("Should not fetch user with invalid token", async () => {
         const response = await request(app)
@@ -170,9 +186,30 @@ describe("Vehicle Owner Authentication Routes", () => {
     });
 
     test("Should log out the user", async () => {
+
+        await prisma.authToken.deleteMany();
+
+        const loginResponse = await request(app)
+            .post("/api/v1/auth/vehicle-owner/login")
+            .send({
+                email: "alice@example.com",
+                password: "securepass",
+                deviceInfo: "Test Device",
+            });
+    
+        expect(loginResponse.status).toBe(200);
+        
+        const token = loginResponse.body.token
+    
+        const savedToken = await prisma.authToken.findUnique({
+            where: { tokenValue: token },
+        });
+
+        expect(savedToken).not.toBeNull();
+
         const response = await request(app)
             .get("/api/v1/auth/vehicle-owner/logout")
-            .set("Authorization", `Bearer ${authToken}`);
+            .set("Authorization", `Bearer ${token}`);
 
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty("message", "Logout successful");
@@ -190,5 +227,5 @@ describe("Vehicle Owner Authentication Routes", () => {
         expect(response.status).toBe(401);
         expect(response.body.error).toBe("Unauthorized: No token provided");
     });
-    
+
 });
