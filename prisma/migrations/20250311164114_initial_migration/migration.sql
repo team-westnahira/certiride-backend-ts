@@ -64,7 +64,7 @@ CREATE TABLE `Mechanic` (
 -- CreateTable
 CREATE TABLE `AuthToken` (
     `tokenId` INTEGER NOT NULL AUTO_INCREMENT,
-    `tokenValue` VARCHAR(1024) NOT NULL,
+    `tokenValue` VARCHAR(512) NOT NULL,
     `userId` INTEGER NOT NULL,
     `userRole` VARCHAR(191) NOT NULL,
     `tokenType` VARCHAR(191) NOT NULL,
