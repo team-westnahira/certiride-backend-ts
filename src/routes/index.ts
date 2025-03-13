@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.use("/vehicle-owner", vehicleOwnerRoutes);
 router.use("/audit-log" , auditLogRoutes)
-router.use("/auth" , authRoutes)
+router.use("/auth" , authRoutes)  
 
 export default router;
