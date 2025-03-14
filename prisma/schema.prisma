@@ -36,11 +36,13 @@ model AuditLog {
 }
 
 model Admin {
-  adminId  Int    @id @default(autoincrement())
+  adminId  Int     @id @default(autoincrement())
   name     String
-  email    String @unique
+  email    String  @unique
   password String
   role     String
+  otp      String
+  isActive Boolean
 }
 
 model Mechanic {
