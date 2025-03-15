@@ -14,6 +14,7 @@ export const addAuditLog = async (userId:number , eventType: string , content:st
   
     return true
   }catch(err){
+    console.log(err)
     return false
   }
   

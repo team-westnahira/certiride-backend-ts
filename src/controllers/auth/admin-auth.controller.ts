@@ -10,7 +10,7 @@ import { addAuditLog } from "../../services/auditlog.service";
 dotenv.config();
 const router = express.Router();
 
-router.post('/admin/register', async (req: Request, res: Response) => {
+router.post('/add-admin', async (req: Request, res: Response) => {
     
     try {
 
@@ -37,8 +37,16 @@ router.post('/admin/register', async (req: Request, res: Response) => {
             where: { email },
         });
 
-        if (existingUser) {
-            res.status(400).json({ error: "Email is already registered" });
+        let existingMechanic = await prisma.mechanic.findUnique({
+            where: {email}
+        })
+
+        let existingOwner = await prisma.vehicleOwner.findUnique({
+            where: {email}
+        })
+
+        if (existingUser || existingMechanic || existingOwner) {
+            res.status(400).json({ error: "Email is already registered one of {Admin , Mechanic , Vehicle owner } account type before" });
             return;
         }
 
@@ -78,5 +86,93 @@ router.post('/admin/register', async (req: Request, res: Response) => {
     }
 
 });
+
+router.post('/login' , async(req:Request , res:Response) => {
+
+    try{
+
+        const adminLoginSchema = z.object({
+            email: z.string().email("Invalid email address"),
+            password: z.string().min(1, "Password is required"),
+            deviceInfo: z.string().max(100 , "Invalid device info")
+        });
+
+        const parsedData = adminLoginSchema.safeParse(req.body);
+        
+        if (!parsedData.success) {
+            res.status(400).json({
+                error: "Validation failed",
+                issues: parsedData.error.errors,
+            });
+            return
+        }
+
+        const { email, password , deviceInfo } = parsedData.data;
+
+        const user = await prisma.admin.findUnique({ where: { email } });
+
+        if (!user) {
+            res.status(401).json({ error: "Invalid credentials" });
+            return
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            res.status(401).json({ error: "Invalid credentials" });
+            return
+        }
+
+        if(!user.isActive){
+            res.status(401).json({ error: "Admin user is not activated!" });
+            return
+        }
+
+        const secretKey = process.env.JWT_SECRET as string;
+
+        if (!secretKey) throw new Error("JWT_SECRET is not defined in environment variables");
+
+        const token = jwt.sign(
+            { id: user.adminId, email: user.email , role: user.role },
+            secretKey,
+            { expiresIn: "30d" }
+        );
+
+        await prisma.authToken.create({
+            data: {
+                tokenType: "login-admin",
+                userId: user.adminId,
+                userRole: user.role,
+                ipAddress: req.ip || '',
+                deviceInfo: deviceInfo,
+                expirationTime: new Date(),
+                tokenValue: token
+            },
+        });
+
+        addAuditLog(user.adminId , "ADMIN_LOGIN" , JSON.stringify({
+            "addedAdminUser": user,
+            "IPAddress": req.ip
+        }))
+
+        res.json({
+            message: "Login successful",
+            token,
+            user: {
+                id: user.adminId,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            },
+        });
+
+        return
+
+    }catch(err) {
+        res.status(500).json({ error: "Internal server error!" });
+        return;
+    }
+
+})
+
 
 export default router
