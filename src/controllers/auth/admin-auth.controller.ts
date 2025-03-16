@@ -6,9 +6,17 @@ import { z } from "zod";
 import prisma from "../../config/prisma";
 import { generateOtp } from "../../utils/otpGenerator";
 import { addAuditLog } from "../../services/auditlog.service";
+import { Admin } from "@prisma/client";
+import adminAuthMiddleware from "../../middleware/admin.middleware";
 
 dotenv.config();
 const router = express.Router();
+
+
+interface AuthenticatedRequest extends Request {
+    user?: Admin
+}
+
 
 router.post('/add-admin', async (req: Request, res: Response) => {
     
@@ -80,7 +88,7 @@ router.post('/add-admin', async (req: Request, res: Response) => {
 
         return;
     } catch (err) {
-        console.error(err);
+        console.log(err);
         res.status(500).json({ error: "Internal server error!" });
         return;
     }
@@ -174,5 +182,86 @@ router.post('/login' , async(req:Request , res:Response) => {
 
 })
 
+
+router.get('/current-admin', adminAuthMiddleware("Moderator") , (req: AuthenticatedRequest, res: Response) => {
+    
+
+    let _user = {...req.user}
+    delete _user.otp
+    delete _user.password
+
+    res.status(200).json({
+        user: _user
+    })
+    return 
+
+})
+
+
+router.post('/block-admin' , adminAuthMiddleware('Admin') , async (req:AuthenticatedRequest , res: Response) => {
+
+    try{
+
+        const adminLoginSchema = z.object({
+            email: z.string().email("Invalid email address"),
+            state: z.boolean()
+        });
+
+        const parsedData = adminLoginSchema.safeParse(req.body);
+        
+        if (!parsedData.success) {
+            res.status(400).json({
+                error: "Validation failed",
+                issues: parsedData.error.errors,
+            });
+            return
+        }
+
+        
+        const { email , state } = parsedData.data;
+
+        const user = await prisma.admin.findUnique({ where: { email } });
+
+        if(req.user?.adminId === user?.adminId){
+            res.status(401).json({ error: "Cannot change the active state of yourself!" });
+            return
+        }
+
+        if (!user) {
+            res.status(401).json({ error: "User not found for this email" });
+            return
+        }
+
+        if (user.role === 'Admin') {
+            res.status(401).json({ error: "Admin account cannot be deactivated" });
+            return
+        }
+
+        const updatedUser = await prisma.admin.update({
+            where: { email: email },
+            data: {
+                isActive: state,
+            },
+        });
+
+        res.json({
+            message: "State changed successfully!",
+            user: {
+                id: updatedUser.adminId,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                isActive: updatedUser.isActive
+            },
+        });
+
+        return
+
+    }catch(err) {
+        res.status(500).json({ error: "Internal server error!" });
+        return;
+    }
+
+})
 
 export default router

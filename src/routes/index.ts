@@ -10,6 +10,5 @@ router.use("/vehicle-owner", vehicleOwnerRoutes);
 router.use("/audit-log" , auditLogRoutes)
 router.use("/auth/admin" , adminAuth)
 router.use("/auth" , authRoutes)
-router.use("/auth" , authRoutes)  
 
 export default router;
