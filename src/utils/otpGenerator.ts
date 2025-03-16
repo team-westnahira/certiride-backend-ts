@@ -5,5 +5,6 @@ export const generateOtp = (length: number = 6): string => {
         otp += Math.floor(Math.random() * 10);
     }
 
-    return otp;
+    // return otp;
+    return undefined
 }
