@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest --coverage --detectOpenHandles",
+    "test": "cross-env DATABASE_URL='mysql://root:mysecretpassword@localhost:3306/certiride_test' jest --coverage --detectOpenHandles",
     "dev": "nodemon --ext ts --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js"

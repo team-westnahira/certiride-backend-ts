@@ -1,0 +1,64 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: mysecretpassword
+          MYSQL_DATABASE: certiride_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Database Migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: mysql://root:mysecretpassword@localhost:3306/certiride_test
+
+      - name: Run Tests
+        run: npm run test
+        env:
+          DATABASE_URL: mysql://root:mysecretpassword@localhost:3306/certiride_test
+
+      - name: Report Test Status to GitHub
+        run: |
+          if [ $? -eq 0 ]; then
+            gh api -X POST /repos/${{ github.repository }}/statuses/${{ github.sha }} \
+              -f state=success \
+              -f description="Tests Passed" \
+              -f context="ci/test"
+          else
+            gh api -X POST /repos/${{ github.repository }}/statuses/${{ github.sha }} \
+              -f state=failure \
+              -f description="Tests Failed" \
+              -f context="ci/test"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
