@@ -35,6 +35,8 @@ jobs:
 
       - name: Run Database Migrations
         run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: mysql://root:root@localhost:3306/certiride_test
 
       - name: Run Tests
         run: npm run test
