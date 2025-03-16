@@ -16,7 +16,7 @@ describe("Mechanic Authentication Routes", () => {
         jest.setTimeout(30000);
 
         process.env.DATABASE_URL = "file:./test.db?mode=memory";
-        await execSync('npx prisma db push');
+        await execSync('npx prisma migrate deploy');
 
         await prisma.authToken.deleteMany();
         await prisma.mechanic.deleteMany();
