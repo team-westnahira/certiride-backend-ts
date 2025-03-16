@@ -42,3 +42,13 @@ jobs:
         run: npm run test
         env:
           DATABASE_URL: mysql://root:mysecretpassword@localhost:3306/certiride_test
+
+      - name: Set status to 'success' or 'failure'
+        run: |
+          if [ $? -eq 0 ]; then
+            gh pr status --state success --repo $GITHUB_REPOSITORY
+          else
+            gh pr status --state failure --repo $GITHUB_REPOSITORY
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
