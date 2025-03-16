@@ -43,12 +43,18 @@ jobs:
         env:
           DATABASE_URL: mysql://root:mysecretpassword@localhost:3306/certiride_test
 
-      - name: Set status to 'success' or 'failure'
+      - name: Report Test Status to GitHub
         run: |
           if [ $? -eq 0 ]; then
-            gh pr status --state success --repo $GITHUB_REPOSITORY
+            gh api -X POST /repos/${{ github.repository }}/statuses/${{ github.sha }} \
+              -f state=success \
+              -f description="Tests Passed" \
+              -f context="ci/test"
           else
-            gh pr status --state failure --repo $GITHUB_REPOSITORY
+            gh api -X POST /repos/${{ github.repository }}/statuses/${{ github.sha }} \
+              -f state=failure \
+              -f description="Tests Failed" \
+              -f context="ci/test"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
