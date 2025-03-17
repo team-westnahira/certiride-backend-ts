@@ -30,7 +30,7 @@ const adminAuthMiddleware = (requiredRole?: string) => {
                 return
             }
 
-            req.user = user;
+            req.user = us
 
             if (req.user.role === "Moderator" && requiredRole !== req.user.role ) {
                 res.status(403).json({ message: "Forbidden. Admins only." });
