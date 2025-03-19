@@ -30,6 +30,11 @@ const adminAuthMiddleware = (requiredRole?: string) => {
                 return
             }
 
+            if(!user.isActive){
+                res.status(403).json({ message: "Admin account is not activated!" });
+                return
+            }
+
             req.user = user;
 
             if (req.user.role === "Moderator" && requiredRole !== req.user.role ) {

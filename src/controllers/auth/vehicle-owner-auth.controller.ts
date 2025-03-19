@@ -5,12 +5,19 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import prisma from "../../config/prisma";
 import { generateOtp } from "../../utils/otpGenerator";
+import { VehicleOwner } from "@prisma/client";
+import vehicleOwnerAuthMiddleware from "../../middleware/vehicleOwner.middleware";
+
+interface AuthenticatedRequest extends Request {
+    user?: VehicleOwner
+}
+
 
 dotenv.config();
 const router = express.Router();
 
 
-router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
     
     try {
         const vehicleOwnerRegisterSchema = z.object({
@@ -108,7 +115,7 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
 });
 
 // Login Route
-router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
     try {
 
         // Validate request body
@@ -188,89 +195,21 @@ router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
     }
 });
 
-router.get('/vehicle-owner/current-user', async (req: Request, res: Response) => {
+router.get('/current-user', vehicleOwnerAuthMiddleware() , async (req: AuthenticatedRequest, res: Response) => {
     
-    try {
-        const authHeader = req.headers.authorization;
+    let _user = {...req.user}
+    delete _user.password
 
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            res.status(401).json({ error: "Unauthorized: No token provided" });
-            return
-        }
+    res.status(200).json({
+        user: _user
+    })
 
-        const token = authHeader.split(" ")[1];
-        const secretKey = process.env.JWT_SECRET as string;
-        if (!secretKey) throw new Error("JWT_SECRET is not defined in environment variables");
-
-        // Verify token
-        let decoded:{
-            id: string;
-            email: string;
-            role: string;
-        } = {
-            id: "",
-            email: "",
-            role: ""
-        }
-        
-        try{
-            decoded = jwt.verify(token, secretKey) as { id: string, email: string, role: string };
-            if (!decoded || decoded.role !== 'vehicleOwner') {
-                res.status(401).json({ error: "Unauthorized: Invalid token" });
-                return
-            }
-        }catch(err){
-            res.status(401).json({ error: "Unauthorized: Invalid token" });
-            return
-        }
-
-        const savedToken = await prisma.authToken.findUnique({
-            where: { tokenValue: token }
-        });
-
-        if(!savedToken) {
-            res.status(401).json({ error: "Unauthorized: Invalid token" });
-            return
-        }
-
-        // Fetch user details
-        const user = await prisma.vehicleOwner.findUnique({
-            where: { id: +decoded.id },
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                address: true,
-                phone: true,
-                nic: true,
-                email: true,
-                verificationStatus: true,
-                dateRegistered: true
-            }
-        });
-
-        if (!user) {
-            res.status(404).json({ error: "User not found" });
-            return
-        }
-
-        if(user.verificationStatus === false){
-            res.status(403).json({ error: "User is not verified!" });
-            return
-        }
-
-        res.json({ user });
-        return
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Internal server error!" });
-        return
-    }
+    return
 
 });
 
 
-router.get('/vehicle-owner/logout', async (req: Request, res: Response) => {
+router.get('/logout', async (req: Request, res: Response) => {
 
     try {
         const authHeader = req.headers.authorization;

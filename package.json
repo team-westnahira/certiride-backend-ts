@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "cross-env DATABASE_URL='mysql://root:mysecretpassword@localhost:3306/certiride_test' jest --coverage --detectOpenHandles",
+    "test-local": "cross-env DATABASE_URL='mysql://root:@localhost:3306/certiride_test' jest --coverage --detectOpenHandles",
     "dev": "nodemon --ext ts --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js"
