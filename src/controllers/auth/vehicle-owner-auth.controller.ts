@@ -3,11 +3,12 @@ import dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import prisma from "../config/prisma";
-import { generateOtp } from "../utils/otpGenerator";
+import prisma from "../../config/prisma";
+import { generateOtp } from "../../utils/otpGenerator";
 
 dotenv.config();
 const router = express.Router();
+
 
 router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
     
@@ -187,7 +188,6 @@ router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
     }
 });
 
-
 router.get('/vehicle-owner/current-user', async (req: Request, res: Response) => {
     
     try {
@@ -307,4 +307,4 @@ router.get('/vehicle-owner/logout', async (req: Request, res: Response) => {
 });
 
 
-export default router;
+export default router

@@ -3,41 +3,47 @@ import dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import prisma from "../config/prisma";
-import { generateOtp } from "../utils/otpGenerator";
+import prisma from "../../config/prisma";
+import { generateOtp } from "../../utils/otpGenerator";
+import { addAuditLog } from "../../services/auditlog.service";
+import { Admin } from "@prisma/client";
+import adminAuthMiddleware from "../../middleware/admin.middleware";
 
 dotenv.config();
 const router = express.Router();
 
-router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
+
+
+router.post('/mechanic/register', async (req: Request, res: Response) => {
     
     try {
-        const vehicleOwnerRegisterSchema = z.object({
-            firstName: z.string().min(1, "First name is required"),
-            lastName: z.string().min(1, "Last name is required"),
-            address: z.string().min(1, "Address is required"),
-            phone: z.string().min(10, "Phone number must be at least 10 digits"),
-            nic: z.string().min(1, "NIC is required"),
+        const mechanicRegisterSchema = z.object({
+            name: z.string().min(1, "Name is required"),
             email: z.string().email("Invalid email address"),
             password: z.string().min(6, "Password must be at least 6 characters long"),
+            address: z.string().min(1, "Address is required"),
+            nic: z.string().min(1, "NIC is required"),
+            cid: z.string().min(1, "CID is required"),
+            phone: z.string().min(10, "Phone number must be at least 10 digits"),
+            specialization: z.string().min(1, "Specialization is required"),
+            
         });
 
         // Validate the request body against the Zod schema
-        const parsedData = vehicleOwnerRegisterSchema.safeParse(req.body);
+        const parsedData = mechanicRegisterSchema.safeParse(req.body);
 
         if (!parsedData.success) {
-            // If validation fails, return errors
             res.status(400).json({
                 error: "Validation failed",
-                issues: parsedData.error.errors, // Zod validation errors
+                issues: parsedData.error.format(),
             });
             return
         }
 
-        const { firstName, lastName, address, phone, nic, email, password } = parsedData.data;
+        const { name, email, password, address, nic, cid, phone, specialization  } = parsedData.data;
 
         // Check if email already exists
-        let existingUser = await prisma.vehicleOwner.findUnique({
+        let existingUser = await prisma.mechanic.findUnique({
             where: { email },
         });
 
@@ -47,17 +53,18 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
         }
 
         // Check for NIC
-        existingUser = await prisma.vehicleOwner.findUnique({
+        existingUser = await prisma.mechanic.findUnique({
             where: { nic },
         });
 
         if (existingUser) {
             res.status(400).json({ error: "NIC is already used" });
             return;
+            // NIC validation to be added
         }
 
         // Check for phone
-        existingUser = await prisma.vehicleOwner.findUnique({
+        existingUser = await prisma.mechanic.findUnique({
             where: { phone },
         });
 
@@ -70,27 +77,26 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create new user
-        const newUser = await prisma.vehicleOwner.create({
+        const newUser = await prisma.mechanic.create({
             data: {
-                firstName,
-                lastName,
-                address,
-                phone,
-                nic,
+                name,
                 email,
                 password: hashedPassword,
+                address,
+                nic,
+                cid,
+                phone,
+                dateRegistered: new Date(),
+                specialization,
                 verificationStatus: true,
-                otp: generateOtp(),
-                dateRegistered: new Date()
             },
         });
 
         res.status(201).json({
             message: "New user registered successfully!",
             user: {
-                id: newUser.id,
-                firstName: newUser.firstName,
-                lastName: newUser.lastName,
+                id: newUser.mechanicId,
+                name: newUser.name,
                 address: newUser.address,
                 phone: newUser.phone,
                 nic: newUser.nic,
@@ -106,18 +112,18 @@ router.post('/vehicle-owner/register', async (req: Request, res: Response) => {
 
 });
 
-// Login Route
-router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
+// Mechanic Login
+router.post('/mechanic/login', async (req: Request, res: Response) => {
     try {
 
         // Validate request body
-        const vehicleOwnerLoginSchema = z.object({
+        const mechanicLoginSchema = z.object({
             email: z.string().email("Invalid email address"),
             password: z.string().min(6, "Password must be at least 6 characters long"),
             deviceInfo: z.string().max(100 , "Invalid device info")
         });
 
-        const parsedData = vehicleOwnerLoginSchema.safeParse(req.body);
+        const parsedData = mechanicLoginSchema.safeParse(req.body);
         
         if (!parsedData.success) {
             res.status(400).json({
@@ -130,7 +136,7 @@ router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
         const { email, password , deviceInfo } = parsedData.data;
 
         // Check if user exists
-        const user = await prisma.vehicleOwner.findUnique({ where: { email } });
+        const user = await prisma.mechanic.findUnique({ where: { email } });
 
         if (!user) {
             res.status(401).json({ error: "Invalid credentials" });
@@ -150,7 +156,7 @@ router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
         if (!secretKey) throw new Error("JWT_SECRET is not defined in environment variables");
 
         const token = jwt.sign(
-            { id: user.id, email: user.email , role: 'vehicleOwner' },
+            { id: user.mechanicId, email: user.email , role: 'mechanic' },
             secretKey,
             { expiresIn: "1h" }
         );
@@ -158,9 +164,9 @@ router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
         // store it in the database
         await prisma.authToken.create({
             data: {
-                tokenType: "login-vehicleOwner",
-                userId: user.id,
-                userRole: "vehicleOwner",
+                tokenType: "login-mechanic",
+                userId: user.mechanicId,
+                userRole: "mechanic",
                 ipAddress: req.ip || '',
                 deviceInfo: deviceInfo,
                 expirationTime: new Date(),
@@ -172,9 +178,8 @@ router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
             message: "Login successful",
             token,
             user: {
-                id: user.id,
-                firstName: user.firstName,
-                lastName: user.lastName,
+                id: user.mechanicId,
+                name: user.name,
                 email: user.email,
             },
         });
@@ -188,7 +193,7 @@ router.post('/vehicle-owner/login', async (req: Request, res: Response) => {
 });
 
 
-router.get('/vehicle-owner/current-user', async (req: Request, res: Response) => {
+router.get('/mechanic/current-user', async (req: Request, res: Response) => {
     
     try {
         const authHeader = req.headers.authorization;
@@ -215,7 +220,7 @@ router.get('/vehicle-owner/current-user', async (req: Request, res: Response) =>
         
         try{
             decoded = jwt.verify(token, secretKey) as { id: string, email: string, role: string };
-            if (!decoded || decoded.role !== 'vehicleOwner') {
+            if (!decoded || decoded.role !== 'mechanic') {
                 res.status(401).json({ error: "Unauthorized: Invalid token" });
                 return
             }
@@ -234,18 +239,20 @@ router.get('/vehicle-owner/current-user', async (req: Request, res: Response) =>
         }
 
         // Fetch user details
-        const user = await prisma.vehicleOwner.findUnique({
-            where: { id: +decoded.id },
+        const user = await prisma.mechanic.findUnique({
+            where: { mechanicId: +decoded.id },
             select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                address: true,
-                phone: true,
-                nic: true,
+                mechanicId: true,
+                name: true,
                 email: true,
+                address: true,
+                nic: true,
+                cid: true,
+                phone: true,
+                dateRegistered: true,
+                specialization: true,
                 verificationStatus: true,
-                dateRegistered: true
+                
             }
         });
 
@@ -270,7 +277,7 @@ router.get('/vehicle-owner/current-user', async (req: Request, res: Response) =>
 });
 
 
-router.get('/vehicle-owner/logout', async (req: Request, res: Response) => {
+router.get('/mechanic/logout', async (req: Request, res: Response) => {
 
     try {
         const authHeader = req.headers.authorization;
@@ -307,4 +314,4 @@ router.get('/vehicle-owner/logout', async (req: Request, res: Response) => {
 });
 
 
-export default router;
+export default router
