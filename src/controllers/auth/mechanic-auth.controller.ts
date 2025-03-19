@@ -6,15 +6,20 @@ import { z } from "zod";
 import prisma from "../../config/prisma";
 import { generateOtp } from "../../utils/otpGenerator";
 import { addAuditLog } from "../../services/auditlog.service";
-import { Admin } from "@prisma/client";
-import adminAuthMiddleware from "../../middleware/admin.middleware";
+import { Admin, Mechanic } from "@prisma/client";
+import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
+
+interface AuthenticatedRequest extends Request {
+    user?: Mechanic
+}
+
 
 dotenv.config();
 const router = express.Router();
 
 
 
-router.post('/mechanic/register', async (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
     
     try {
         const mechanicRegisterSchema = z.object({
@@ -113,7 +118,7 @@ router.post('/mechanic/register', async (req: Request, res: Response) => {
 });
 
 // Mechanic Login
-router.post('/mechanic/login', async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
     try {
 
         // Validate request body
@@ -193,91 +198,20 @@ router.post('/mechanic/login', async (req: Request, res: Response) => {
 });
 
 
-router.get('/mechanic/current-user', async (req: Request, res: Response) => {
+router.get('/current-user' , mechanicAuthMiddleware() , async (req: AuthenticatedRequest, res: Response) => {
     
-    try {
-        const authHeader = req.headers.authorization;
+    let _user = {...req.user}
+    delete _user.password
 
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            res.status(401).json({ error: "Unauthorized: No token provided" });
-            return
-        }
+    res.status(200).json({
+        user: _user
+    })
 
-        const token = authHeader.split(" ")[1];
-        const secretKey = process.env.JWT_SECRET as string;
-        if (!secretKey) throw new Error("JWT_SECRET is not defined in environment variables");
-
-        // Verify token
-        let decoded:{
-            id: string;
-            email: string;
-            role: string;
-        } = {
-            id: "",
-            email: "",
-            role: ""
-        }
-        
-        try{
-            decoded = jwt.verify(token, secretKey) as { id: string, email: string, role: string };
-            if (!decoded || decoded.role !== 'mechanic') {
-                res.status(401).json({ error: "Unauthorized: Invalid token" });
-                return
-            }
-        }catch(err){
-            res.status(401).json({ error: "Unauthorized: Invalid token" });
-            return
-        }
-
-        const savedToken = await prisma.authToken.findUnique({
-            where: { tokenValue: token }
-        });
-
-        if(!savedToken) {
-            res.status(401).json({ error: "Unauthorized: Invalid token" });
-            return
-        }
-
-        // Fetch user details
-        const user = await prisma.mechanic.findUnique({
-            where: { mechanicId: +decoded.id },
-            select: {
-                mechanicId: true,
-                name: true,
-                email: true,
-                address: true,
-                nic: true,
-                cid: true,
-                phone: true,
-                dateRegistered: true,
-                specialization: true,
-                verificationStatus: true,
-                
-            }
-        });
-
-        if (!user) {
-            res.status(404).json({ error: "User not found" });
-            return
-        }
-
-        if(user.verificationStatus === false){
-            res.status(403).json({ error: "User is not verified!" });
-            return
-        }
-
-        res.json({ user });
-        return
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Internal server error!" });
-        return
-    }
-
+    return
 });
 
 
-router.get('/mechanic/logout', async (req: Request, res: Response) => {
+router.get('/logout', async (req: Request, res: Response) => {
 
     try {
         const authHeader = req.headers.authorization;
