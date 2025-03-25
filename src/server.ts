@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import routes from "./routes";
-import { queryVehicle, testConnection } from "./blockchain/initConnection";
+import axiosInstance from "./config/axios";
 
 dotenv.config();
 
@@ -13,10 +13,8 @@ app.use(cors());
 
 app.use(express.json());
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
   res.send("Hello, TypeScript Express API!");
-  // testConnection()
-  queryVehicle("hello world")
 });
 
 app.use("/api/v1" , routes);
