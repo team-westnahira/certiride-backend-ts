@@ -5,7 +5,7 @@ import auditLogRoutes from "../controllers/auditlog.controller";
 import adminAuth from "../controllers/auth/admin-auth.controller";
 import mechanicAuth from "../controllers/auth/mechanic-auth.controller";
 import vehicleOwnerAuth from "../controllers/auth/vehicle-owner-auth.controller";
-import vehicleController from "../controllers/vehicleregisterendpoint.controller";
+import vehicleController from "../controllers/vehicle.controller";
 const router = express.Router();
 
 router.use("/vehicle-owner", vehicleOwnerRoutes);
