@@ -5,7 +5,7 @@ import auditLogRoutes from "../controllers/auditlog.controller"
 import adminAuth from "../controllers/auth/admin-auth.controller"
 import mechanicAuth from "../controllers/auth/mechanic-auth.controller"
 import vehicleOwnerAuth from "../controllers/auth/vehicle-owner-auth.controller"
-import vehicleInfo from "../controllers/vehicledetails.controller"
+import vehicleInfo from "../controllers/vehicle.controller"
 
 const router = express.Router();
 
