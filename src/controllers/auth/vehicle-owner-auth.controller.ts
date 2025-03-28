@@ -7,6 +7,7 @@ import prisma from "../../config/prisma";
 import { generateOtp } from "../../utils/otpGenerator";
 import { VehicleOwner } from "@prisma/client";
 import vehicleOwnerAuthMiddleware from "../../middleware/vehicleOwner.middleware";
+import axiosInstance from "../../config/axios";
 
 interface AuthenticatedRequest extends Request {
     user?: VehicleOwner
@@ -87,6 +88,10 @@ router.post('/register', async (req: Request, res: Response) => {
                 dateRegistered: new Date()
             },
         });
+
+        // call the blockchain service to create a new user wallet
+        const response = await axiosInstance.get('/enrollUser/' + nic);
+        console.log(response)
 
         res.status(201).json({
             message: "New user registered successfully!",
