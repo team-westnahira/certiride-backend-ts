@@ -5,7 +5,7 @@ import auditLogRoutes from "../controllers/auditlog.controller"
 import adminAuth from "../controllers/auth/admin-auth.controller"
 import mechanicAuth from "../controllers/auth/mechanic-auth.controller"
 import vehicleOwnerAuth from "../controllers/auth/vehicle-owner-auth.controller"
-import vehicleInfo from "../controllers/vehicle.controller"
+import vehicleController from "../controllers/vehicle.controller"
 
 const router = express.Router();
 
@@ -16,6 +16,7 @@ router.use("/audit-log" , auditLogRoutes)
 router.use("/auth/admin" , adminAuth)
 router.use("/auth/mechanic" , mechanicAuth)
 router.use("/auth/vehicle-owner" , vehicleOwnerAuth)
-router.use("/vehicle-info" , vehicleInfo)
+router.use("/register-vehicle", vehicleController);
+router.use("/vehicle-info" , vehicleController)
 
 export default router;
