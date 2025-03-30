@@ -86,7 +86,7 @@ model Vehicle {
   ownerId     Int
   manufacture String
   model       String
-  year        DateTime
+  year        Int
 }
 
 model Report {

@@ -2,16 +2,19 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import routes from "./routes";
-import axiosInstance from "./config/axios";
+import fileUpload from "express-fileupload";
+
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
-
+app.use(fileUpload());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(cors());
 
 app.get("/", async (req, res) => {
   res.send("Hello, TypeScript Express API!");
