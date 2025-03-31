@@ -57,7 +57,8 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
         const existingVehicle = await prisma.vehicle.findUnique({ where: { vin } });
 
         if (existingVehicle) {
-            res.status(409).json({ message: "Vehicle is already registered." });   
+            res.status(409).json({ message: "Vehicle is already registered." });
+            return
         }
 
         const file = req.files?.registrationCertificate as fileUpload.UploadedFile;
