@@ -126,7 +126,8 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
             try{
                 await axiosInstance.post('/invoke' , {
                     fn: 'createVehicle',
-                    args: [vehicleCertificate.chassis_number , req.user?.id , newVehicle.manufacture , newVehicle.model, newVehicle.year, color, engineCapacity, province, fuelType]
+                    args: [vehicleCertificate.chassis_number , req.user?.id , newVehicle.manufacture , newVehicle.model, newVehicle.year, color, engineCapacity, province, fuelType],
+                    username: req.user?.nic
                 })
 
             }catch(err){
