@@ -87,6 +87,7 @@ model Vehicle {
   manufacture String
   model       String
   year        Int
+  initialMilage Int
 }
 
 model Report {

@@ -6,7 +6,10 @@ import { VehicleOwner } from "@prisma/client";
 import fileUpload from "express-fileupload";
 import path from "path";
 import fs from "fs";
-import { makeGooseAIRequest } from "../services/ai.service";
+import { extractVehicleCertificateDocumentData } from "../services/ai.service";
+import analyzeDocument from "../services/ocr.service";
+import { VehicleRegistrationData } from "../types";
+import axiosInstance from "../config/axios";
 const router: Router = express.Router();
 
 interface AuthenticatedRequest extends Request {
@@ -31,6 +34,7 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
             engineCapacity: z.string().min(1, "Engine capacity is required"),
             province: z.string().min(1, "Province is required"),
             fuelType: z.string().min(1, "Fuel type is required"),
+            initialMilage: z.string().min(1, "Initial Milage is required")
         });
 
         const parsedData = vehicleOwnerRegisterSchema.safeParse(req.body);
@@ -43,7 +47,7 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
             return
         }
 
-        const { vin, manufacture, model, year, color, engineCapacity, province, fuelType } = parsedData.data;
+        const { vin, manufacture, model, year, color, engineCapacity, province, fuelType , initialMilage } = parsedData.data;
 
         if (!req.user) {
             res.status(401).json({ message: "Unauthorized. User not authenticated." });
@@ -88,22 +92,51 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
                 return
             }
 
-            makeGooseAIRequest();
+            const result = await analyzeDocument(filePath)
+            const extractedData = await extractVehicleCertificateDocumentData(result.content)
+
+            if(extractedData === null){
+                res.status(400).json({ message: "Error extracting vehicle data from the document." });
+                return;
+            }
+
+            const vehicleCertificate: VehicleRegistrationData = JSON.parse(extractedData);
             
-            // const newVehicle = await prisma.vehicle.create({
-            //     data: {
-            //         vin,
-            //         manufacture,
-            //         ownerId: req.user?.id || 0,
-            //         model,
-            //         year: +year,
-            //     },
-            // });
+            if(vehicleCertificate.authenticity_score < 0.8){
+                res.status(400).json({ message: "The extracted vehicle data is not authentic." });
+                return;
+            }
+
+            if (vehicleCertificate.chassis_number !== vin){
+                res.status(400).json({ message: "The extracted vehicle data does not match the provided VIN." });
+                return;
+            }
+
+            const newVehicle = await prisma.vehicle.create({
+                data: {
+                    vin,
+                    manufacture,
+                    ownerId: req.user?.id || 0,
+                    model,
+                    year: +year,
+                    initialMilage: +initialMilage
+                },
+            });
+
+            try{
+                await axiosInstance.post('/invoke' , {
+                    fn: 'createVehicle',
+                    args: [vehicleCertificate.chassis_number , req.user?.id , newVehicle.manufacture , newVehicle.model, newVehicle.year, color, engineCapacity, province, fuelType]
+                })
+
+            }catch(err){
+                res.status(500).json({ message: "Error invoking chaincode. Could not create vehicle asset.", error: err });
+                return;
+            }
 
             res.status(201).json({
                 message: "Vehicle registered successfully.",
-                // vehicle: newVehicle,
-                path: filePath
+                vehicle: newVehicle
             });
     
             return

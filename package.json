@@ -14,6 +14,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@azure/ai-form-recognizer": "^5.0.0",
+    "@azure/core-auth": "^1.9.0",
     "axios": "^1.8.4",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -22,11 +24,10 @@
     "express-fileupload": "^1.5.1",
     "fabric-ca-client": "^2.2.20",
     "fabric-network": "^2.2.20",
-    "formidable": "^3.5.2",
     "jest-mock-extended": "^4.0.0-beta1",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.12.0",
-    "openai": "^4.90.0",
+    "openai": "^4.91.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
