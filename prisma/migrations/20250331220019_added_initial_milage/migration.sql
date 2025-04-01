@@ -5,4 +5,4 @@
 
 */
 -- AlterTable
-ALTER TABLE `vehicle` ADD COLUMN `initialMilage` INTEGER NOT NULL;
+ALTER TABLE `Vehicle` ADD COLUMN `initialMilage` INTEGER NOT NULL;

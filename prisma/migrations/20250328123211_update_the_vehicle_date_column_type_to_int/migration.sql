@@ -5,5 +5,5 @@
 
 */
 -- AlterTable
-ALTER TABLE `vehicle` DROP COLUMN `year`,
+ALTER TABLE `Vehicle` DROP COLUMN `year`,
     ADD COLUMN `year` INTEGER NOT NULL;
