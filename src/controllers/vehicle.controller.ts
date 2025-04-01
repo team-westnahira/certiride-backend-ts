@@ -159,4 +159,32 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
 });
 
 
+router.get('/get-user-vehicles' , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+    try{
+
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized. User not authenticated." });
+            return 
+        }
+        
+        const vehicles = await prisma.vehicle.findMany({
+            where: {
+                ownerId: req.user.id
+            }
+        });
+
+        res.status(200).json({
+            vehicles
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message: "Internal server error. Could not fetch user vehicles."
+        });
+        return
+    }
+
+})
+
+
 export default router;
