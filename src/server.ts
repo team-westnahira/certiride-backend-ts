@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import routes from "./routes";
+import admin from "./config/firebase";
+
 
 dotenv.config();
 
@@ -20,6 +22,7 @@ app.use("/api/v1" , routes);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(3000, () => console.log("Server running on http://localhost:3000"));
+  console.log('admin account : ' + admin.app)
 }
 
 export default app;
