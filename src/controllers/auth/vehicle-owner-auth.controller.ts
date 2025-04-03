@@ -7,15 +7,15 @@ import prisma from "../../config/prisma";
 import { generateOtp } from "../../utils/otpGenerator";
 import { VehicleOwner } from "@prisma/client";
 import vehicleOwnerAuthMiddleware from "../../middleware/vehicleOwner.middleware";
+import axiosInstance from "../../config/axios";
 
 interface AuthenticatedRequest extends Request {
     user?: VehicleOwner
 }
 
-
 dotenv.config();
 const router = express.Router();
-
+const sriLankanNICRegex = /^(?:\d{9}[VX]|\d{12})$/;
 
 router.post('/register', async (req: Request, res: Response) => {
     
@@ -25,26 +25,26 @@ router.post('/register', async (req: Request, res: Response) => {
             lastName: z.string().min(1, "Last name is required"),
             address: z.string().min(1, "Address is required"),
             phone: z.string().min(10, "Phone number must be at least 10 digits"),
-            nic: z.string().min(1, "NIC is required"),
+            nic: z.string()
+                .min(10, "NIC must be at least 10 characters long")
+                .max(12, "NIC must be at most 12 characters long")
+                .regex(sriLankanNICRegex, "Invalid Sri Lankan NIC format"),
             email: z.string().email("Invalid email address"),
             password: z.string().min(6, "Password must be at least 6 characters long"),
         });
 
-        // Validate the request body against the Zod schema
         const parsedData = vehicleOwnerRegisterSchema.safeParse(req.body);
 
         if (!parsedData.success) {
-            // If validation fails, return errors
             res.status(400).json({
                 error: "Validation failed",
-                issues: parsedData.error.errors, // Zod validation errors
+                issues: parsedData.error.errors,
             });
             return
         }
 
         const { firstName, lastName, address, phone, nic, email, password } = parsedData.data;
 
-        // Check if email already exists
         let existingUser = await prisma.vehicleOwner.findUnique({
             where: { email },
         });
@@ -54,7 +54,6 @@ router.post('/register', async (req: Request, res: Response) => {
             return;
         }
 
-        // Check for NIC
         existingUser = await prisma.vehicleOwner.findUnique({
             where: { nic },
         });
@@ -64,7 +63,6 @@ router.post('/register', async (req: Request, res: Response) => {
             return;
         }
 
-        // Check for phone
         existingUser = await prisma.vehicleOwner.findUnique({
             where: { phone },
         });
@@ -74,10 +72,8 @@ router.post('/register', async (req: Request, res: Response) => {
             return;
         }
 
-        // Hash the password before storing it
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user
         const newUser = await prisma.vehicleOwner.create({
             data: {
                 firstName,
@@ -92,6 +88,10 @@ router.post('/register', async (req: Request, res: Response) => {
                 dateRegistered: new Date()
             },
         });
+
+        // call the blockchain service to create a new user wallet
+        const response = await axiosInstance.get('/enrollUser/' + nic);
+        console.log(response)
 
         res.status(201).json({
             message: "New user registered successfully!",

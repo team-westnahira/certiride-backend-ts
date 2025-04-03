@@ -4,37 +4,36 @@ import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import prisma from "../../config/prisma";
-import { generateOtp } from "../../utils/otpGenerator";
-import { addAuditLog } from "../../services/auditlog.service";
-import { Admin, Mechanic } from "@prisma/client";
+import {Mechanic } from "@prisma/client";
 import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
 
 interface AuthenticatedRequest extends Request {
     user?: Mechanic
 }
 
-
 dotenv.config();
 const router = express.Router();
-
+const sriLankanNICRegex = /^(?:\d{9}[VX]|\d{12})$/;
 
 
 router.post('/register', async (req: Request, res: Response) => {
     
     try {
+        
         const mechanicRegisterSchema = z.object({
             name: z.string().min(1, "Name is required"),
             email: z.string().email("Invalid email address"),
             password: z.string().min(6, "Password must be at least 6 characters long"),
             address: z.string().min(1, "Address is required"),
-            nic: z.string().min(1, "NIC is required"),
+            nic: z.string()
+                .min(10, "NIC must be at least 10 characters long")
+                .max(12, "NIC must be at most 12 characters long")
+                .regex(sriLankanNICRegex, "Invalid Sri Lankan NIC format"),
             cid: z.string().min(1, "CID is required"),
             phone: z.string().min(10, "Phone number must be at least 10 digits"),
             specialization: z.string().min(1, "Specialization is required"),
-            
         });
 
-        // Validate the request body against the Zod schema
         const parsedData = mechanicRegisterSchema.safeParse(req.body);
 
         if (!parsedData.success) {
@@ -47,7 +46,6 @@ router.post('/register', async (req: Request, res: Response) => {
 
         const { name, email, password, address, nic, cid, phone, specialization  } = parsedData.data;
 
-        // Check if email already exists
         let existingUser = await prisma.mechanic.findUnique({
             where: { email },
         });
@@ -57,7 +55,6 @@ router.post('/register', async (req: Request, res: Response) => {
             return;
         }
 
-        // Check for NIC
         existingUser = await prisma.mechanic.findUnique({
             where: { nic },
         });
@@ -65,10 +62,8 @@ router.post('/register', async (req: Request, res: Response) => {
         if (existingUser) {
             res.status(400).json({ error: "NIC is already used" });
             return;
-            // NIC validation to be added
         }
 
-        // Check for phone
         existingUser = await prisma.mechanic.findUnique({
             where: { phone },
         });
@@ -78,10 +73,8 @@ router.post('/register', async (req: Request, res: Response) => {
             return;
         }
 
-        // Hash the password before storing it
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user
         const newUser = await prisma.mechanic.create({
             data: {
                 name,
