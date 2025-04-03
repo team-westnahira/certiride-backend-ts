@@ -41,11 +41,17 @@ jobs:
         run: npx prisma migrate deploy
         env:
           DATABASE_URL: mysql://root:mysecretpassword@localhost:3306/certiride_test
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          Document_Intelligence_API_KEY: ${{ secrets.Document_Intelligence_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Run Tests
         run: npm run test
         env:
           DATABASE_URL: mysql://root:mysecretpassword@localhost:3306/certiride_test
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          Document_Intelligence_API_KEY: ${{ secrets.Document_Intelligence_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Report Test Status to GitHub
         run: |
