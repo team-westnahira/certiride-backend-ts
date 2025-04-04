@@ -187,4 +187,44 @@ router.get('/get-user-vehicles' , vehicleOwnerAuthMiddleware(), async (req: Auth
 })
 
 
+router.get('/get-vehicle-full-data' , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+    try{
+
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized. User not authenticated." });
+            return 
+        }
+
+        if(!req.query.vin){
+            res.status(400).json({ message: "Pleas provide valid vin" });
+            return 
+        }
+        
+        const vehicle = await prisma.vehicle.findUnique({
+            where: {
+                vin: req.query.vin as string,
+                ownerId: req.user.id
+            }
+        });
+
+        if (!vehicle){
+            res.status(404).json({ message: "Vehicle not found!" });
+            return 
+        }
+
+        const data  = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${req.user.nic}`)
+
+        res.status(200).json({
+            vehicleOverviewData : vehicle,
+            fullDetails: data.data.data
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message: "Internal server error. Could not fetch user vehicles."
+        });
+        return
+    }
+})
+
 export default router;
