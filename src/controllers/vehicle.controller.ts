@@ -12,6 +12,9 @@ import { VehicleRegistrationData } from "../types";
 import axiosInstance from "../config/axios";
 import PDFDocument from "pdfkit";
 import { Readable } from "stream";
+import { VehicleBlockChainModel } from "../models/vehicle.model";
+import { calculateCompositeRating, handleCaluclateAccidentRepairScore, handleCaluclateServiceReocordScore } from "../services/certificate.service";
+import { mockVehicle } from "../tests/mockVehicle";
 
 const router: Router = express.Router();
 
@@ -232,56 +235,67 @@ router.get('/get-vehicle-full-data' , vehicleOwnerAuthMiddleware(), async (req: 
 
 router.get('/generate-certificate', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { vin } = req.query;
+        const { vin } = req.query;
+    
+        if (!vin || typeof vin !== "string") {
+            res.status(400).json({ message: "VIN is required." });
+            return;
+        }
+    
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+    
+        const vehicle = await prisma.vehicle.findUnique({
+            where: { vin, ownerId: req.user.id },
+        });
+    
+        if (!vehicle) {
+            res.status(404).json({ message: "Vehicle not found or does not belong to user." });
+            return;
+        }
+
+      
+        const blockchainResponse = await axiosInstance.get(`/query/GetVehicle/${vin}/${req.user.nic}`);
+        const fullDetails = blockchainResponse.data.data as VehicleBlockChainModel;
+        const score = calculateCompositeRating(mockVehicle);
+
+        res.status(200).json({
+            message: "Certificate generated successfully.",
+            vehicle,
+            score,
+            fullDetails
+        })
+        return
+
+    //   const doc = new PDFDocument();
+    //   const stream = new Readable().wrap(doc);
   
-      if (!vin || typeof vin !== "string") {
-        res.status(400).json({ message: "VIN is required." });
-        return;
-      }
+    //   res.setHeader("Content-Type", "application/pdf");
+    //   res.setHeader("Content-Disposition", `attachment; filename=certificate-${vin}.pdf`);
   
-      if (!req.user) {
-        res.status(401).json({ message: "Unauthorized" });
-        return;
-      }
+    //   doc.fontSize(18).text("Vehicle Certificate", { align: "center" });
+    //   doc.moveDown();
   
-      const vehicle = await prisma.vehicle.findUnique({
-        where: { vin, ownerId: req.user.id },
-      });
+    //   doc.fontSize(14).text(`Owner: ${req.user.firstName} ${req.user.lastName}`);
+    //   doc.text(`VIN: ${vin}`);
+    //   doc.text(`Model: ${vehicle.model}`);
+    //   doc.text(`Manufacture: ${vehicle.manufacture}`);
+    //   doc.text(`Year: ${vehicle.year}`);
+    //   doc.text(`Initial Mileage: ${vehicle.initialMilage}`);
+    //   doc.moveDown();
   
-      if (!vehicle) {
-        res.status(404).json({ message: "Vehicle not found or does not belong to user." });
-        return;
-      }
+    //   doc.fontSize(14).text("Blockchain Vehicle Metadata", { underline: true });
+    //   doc.fontSize(10).text(JSON.stringify(fullDetails, null, 2));
   
-      const blockchainResponse = await axiosInstance.get(`/query/GetVehicle/${vin}/${req.user.nic}`);
-      const fullDetails = blockchainResponse.data.data;
-  
-      const doc = new PDFDocument();
-      const stream = new Readable().wrap(doc);
-  
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=certificate-${vin}.pdf`);
-  
-      doc.fontSize(18).text("Vehicle Certificate", { align: "center" });
-      doc.moveDown();
-  
-      doc.fontSize(14).text(`Owner: ${req.user.firstName} ${req.user.lastName}`);
-      doc.text(`VIN: ${vin}`);
-      doc.text(`Model: ${vehicle.model}`);
-      doc.text(`Manufacture: ${vehicle.manufacture}`);
-      doc.text(`Year: ${vehicle.year}`);
-      doc.text(`Initial Mileage: ${vehicle.initialMilage}`);
-      doc.moveDown();
-  
-      doc.fontSize(14).text("Blockchain Vehicle Metadata", { underline: true });
-      doc.fontSize(10).text(JSON.stringify(fullDetails, null, 2));
-  
-      doc.end();
-      stream.pipe(res);
+    //   doc.end();
+    //   stream.pipe(res);
     } catch (error: any) {
-      console.error("Error generating certificate:", error);
-      res.status(500).json({ message: "Internal server error", error: error.message });
+        console.error("Error generating certificate:", error);
+        res.status(500).json({ message: "Internal server error", error: error.message });
     }
-  });
+    
+});
 
 export default router;

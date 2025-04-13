@@ -1,4 +1,5 @@
 import { AttachmentBlockChainModel } from "./attachment.model";
+import { VehicleInteractionBlockChainModel } from "./interaction.model";
 
 export type VehicleBlockChainModel = {
     vin: string;
@@ -10,6 +11,10 @@ export type VehicleBlockChainModel = {
     engine_capacity: string;
     province: string;
     fuel_type: string;
-    interaction: any[];
+    interaction: VehicleInteractionBlockChainModel[];
     attachments: AttachmentBlockChainModel[]
+    // inspections: string;
 }
+
+
+
