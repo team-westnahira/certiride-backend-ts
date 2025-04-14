@@ -12,7 +12,6 @@ import { VehicleRegistrationData } from "../types";
 import axiosInstance from "../config/axios";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
 import { calculateCompositeRating } from "../services/certificate.service";
-import { mockVehicle } from "../tests/mockVehicle";
 
 const router: Router = express.Router();
 
@@ -257,14 +256,14 @@ router.get('/generate-certificate', vehicleOwnerAuthMiddleware(), async (req: Au
       
         const blockchainResponse = await axiosInstance.get(`/query/GetVehicle/${vin}/${req.user.nic}`);
         const fullDetails = blockchainResponse.data.data as VehicleBlockChainModel;
-        const score = calculateCompositeRating(mockVehicle);
+        // const score = calculateCompositeRating(mockVehicle);
 
         // generatePDF('./src/templates/pdf/overview-certificate.html')
 
         res.status(200).json({
             message: "Certificate generated successfully.",
             vehicle,
-            score,
+            // score,
             fullDetails
         })
         return
