@@ -10,10 +10,8 @@ import { extractVehicleCertificateDocumentData } from "../services/ai.service";
 import analyzeDocument from "../services/ocr.service";
 import { VehicleRegistrationData } from "../types";
 import axiosInstance from "../config/axios";
-import PDFDocument from "pdfkit";
-import { Readable } from "stream";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
-import { calculateCompositeRating, handleCaluclateAccidentRepairScore, handleCaluclateServiceReocordScore } from "../services/certificate.service";
+import { calculateCompositeRating } from "../services/certificate.service";
 import { mockVehicle } from "../tests/mockVehicle";
 
 const router: Router = express.Router();
@@ -261,6 +259,8 @@ router.get('/generate-certificate', vehicleOwnerAuthMiddleware(), async (req: Au
         const fullDetails = blockchainResponse.data.data as VehicleBlockChainModel;
         const score = calculateCompositeRating(mockVehicle);
 
+        // generatePDF('./src/templates/pdf/overview-certificate.html')
+
         res.status(200).json({
             message: "Certificate generated successfully.",
             vehicle,
@@ -269,33 +269,11 @@ router.get('/generate-certificate', vehicleOwnerAuthMiddleware(), async (req: Au
         })
         return
 
-    //   const doc = new PDFDocument();
-    //   const stream = new Readable().wrap(doc);
-  
-    //   res.setHeader("Content-Type", "application/pdf");
-    //   res.setHeader("Content-Disposition", `attachment; filename=certificate-${vin}.pdf`);
-  
-    //   doc.fontSize(18).text("Vehicle Certificate", { align: "center" });
-    //   doc.moveDown();
-  
-    //   doc.fontSize(14).text(`Owner: ${req.user.firstName} ${req.user.lastName}`);
-    //   doc.text(`VIN: ${vin}`);
-    //   doc.text(`Model: ${vehicle.model}`);
-    //   doc.text(`Manufacture: ${vehicle.manufacture}`);
-    //   doc.text(`Year: ${vehicle.year}`);
-    //   doc.text(`Initial Mileage: ${vehicle.initialMilage}`);
-    //   doc.moveDown();
-  
-    //   doc.fontSize(14).text("Blockchain Vehicle Metadata", { underline: true });
-    //   doc.fontSize(10).text(JSON.stringify(fullDetails, null, 2));
-  
-    //   doc.end();
-    //   stream.pipe(res);
     } catch (error: any) {
         console.error("Error generating certificate:", error);
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
-    
+
 });
 
 export default router;
