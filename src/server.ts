@@ -2,11 +2,10 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import routes from "./routes";
-// import admin from "./config/firebase";
 import fileUpload from "express-fileupload";
 
 
-dotenv.config();
+dotenv.config({ path: "./.env" });
 
 const app = express();
 const PORT = process.env.PORT || 5000;

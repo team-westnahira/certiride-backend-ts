@@ -11,7 +11,6 @@ import analyzeDocument from "../services/ocr.service";
 import { VehicleRegistrationData } from "../types";
 import axiosInstance from "../config/axios";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
-import { calculateCompositeRating } from "../services/certificate.service";
 
 const router: Router = express.Router();
 
@@ -28,7 +27,7 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
             return 
         }
 
-        const vehicleOwnerRegisterSchema = z.object({
+        const vehicleRegisterSchema = z.object({
             vin: z.string().min(1, "VIN is required"),
             manufacture: z.string().min(1, "Manufacture is required"),
             model: z.string().min(1, "Model is required"),
@@ -40,7 +39,7 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
             initialMilage: z.string().min(1, "Initial Milage is required")
         });
 
-        const parsedData = vehicleOwnerRegisterSchema.safeParse(req.body);
+        const parsedData = vehicleRegisterSchema.safeParse(req.body);
 
         if (!parsedData.success) {
             res.status(400).json({
@@ -229,6 +228,7 @@ router.get('/get-vehicle-full-data' , vehicleOwnerAuthMiddleware(), async (req: 
         return
     }
 })
+
 
 router.get('/generate-certificate', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
     try {
