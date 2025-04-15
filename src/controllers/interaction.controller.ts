@@ -6,6 +6,7 @@ import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
 import axiosInstance from "../config/axios";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
 import { randomUUID } from "crypto";
+import mechanicAuthMiddleware from "../middleware/mechanic.middleware";
 
 const router = Router();
 
@@ -13,7 +14,7 @@ interface AuthenticatedRequest extends Request {
     user?: Mechanic
 }
 
-router.post('/add-new-interaction' , vehicleOwnerAuthMiddleware() , async (req:AuthenticatedRequest , res:Response) => {
+router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:AuthenticatedRequest , res:Response) => {
 
     const newInteractionSchema = z.object({
         vehicle_id: z.number().min(1, "Vehicle ID is required"),
@@ -80,8 +81,8 @@ router.post('/add-new-interaction' , vehicleOwnerAuthMiddleware() , async (req:A
     const interactionData = {
         interaction_id: uuid,
         vehicle_id: vehicle.vin,
-        mechanic_id: req.user?.mechanicId,
-        interaction_date,
+        mechanic_id: req.user?.mechanicId+'',
+        interaction_date: new Date(interaction_date),
         interaction_type,
         mileage,
         status: "open",
@@ -92,6 +93,7 @@ router.post('/add-new-interaction' , vehicleOwnerAuthMiddleware() , async (req:A
         diagnostic_report: null,
         invoice: null,
         additional_info: {},
+        created_at: new Date(),
     };
 
     await axiosInstance.post('/invoke' , {
@@ -105,17 +107,86 @@ router.post('/add-new-interaction' , vehicleOwnerAuthMiddleware() , async (req:A
 
     res.status(200).json({
         message: "Interaction data is valid",
-        data: parsedData.data,
-        uuid
+        interactionId: uuid,
+        userId: vehicleOwner.id,
+        vehicleId: vehicle.vin,
     });
+
     return
 
 })
 
 
+router.get('/close-interaction' , mechanicAuthMiddleware() , async (req:AuthenticatedRequest , res:Response) => {
 
+    const vehicleId = req.query.vehicle_id as string
+    const interactionId = req.query.interaction_id as string
 
+    if (!vehicleId || !interactionId) {
+        res.status(400).json({ message: "Vehicle ID and Interaction ID are required" });
+        return
+    }
 
+    if(!req.user){
+        res.status(401).json({ message: "Unauthorized. User not authenticated." });
+        return 
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+        where: { vin: vehicleId },
+    });
+
+    if (!vehicle) {
+        res.status(404).json({ message: "Vehicle not found" });
+        return
+    }
+
+    const vehicleOwner = await prisma.vehicleOwner.findUnique({
+        where: { id: vehicle.ownerId },
+    });
+
+    if (!vehicleOwner) {
+        res.status(404).json({ message: "Vehicle owner not found" });
+        return
+    }
+
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic}`)
+    const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
+    const interaction = vehicleChainData.interaction.find(interaction => interaction.interaction_id === interactionId)
+
+    if (!interaction) {
+        res.status(404).json({ message: "Interaction not found" });
+        return
+    }
+
+    if (interaction.status !== "open") {
+        res.status(400).json({ message: "Interaction is already closed" });
+        return
+    }
+
+    if (+interaction.mechanic_id !== req.user.mechanicId) {
+        res.status(400).json({ message: "You cannot close this interaction" });
+        return
+    }
+
+    await axiosInstance.post('/invoke' , {
+        'fn': 'CloseInteraction',
+        'args': [
+            vehicle.vin,
+            interaction.interaction_id
+        ],
+        username: vehicleOwner.nic,
+    })
+
+    res.status(200).json({
+        message: "Interaction closed successfully",
+        interactionId: interactionId,
+        userId: vehicleOwner.id,
+        vehicleId: vehicle.vin,
+    });
+    return
+
+})
 
 
 export default router
