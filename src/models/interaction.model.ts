@@ -7,6 +7,7 @@ export type VehicleInteractionBlockChainModel = {
     interaction_date: string;
     interaction_type: string;
     mileage: number;
+    status: string;
 
     service_record: ServiceRecordBlockChainModel | null;
     accident_repair_record: AccidentRepairRecord | null;

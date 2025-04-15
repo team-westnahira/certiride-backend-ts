@@ -6,6 +6,7 @@ import adminAuth from "../controllers/auth/admin-auth.controller";
 import mechanicAuth from "../controllers/auth/mechanic-auth.controller";
 import vehicleOwnerAuth from "../controllers/auth/vehicle-owner-auth.controller";
 import vehicleController from "../controllers/vehicle.controller";
+import interactionController from "../controllers/interaction.controller"
 const router = express.Router();
 
 router.use("/vehicle-owner", vehicleOwnerRoutes);
@@ -16,5 +17,6 @@ router.use("/auth/admin", adminAuth);
 router.use("/auth/mechanic", mechanicAuth);
 router.use("/auth/vehicle-owner", vehicleOwnerAuth);
 router.use("/vehicle", vehicleController);
+router.use("/interaction", interactionController);
 
 export default router;
