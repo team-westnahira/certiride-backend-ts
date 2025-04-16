@@ -7,6 +7,8 @@ import mechanicAuth from "../controllers/auth/mechanic-auth.controller";
 import vehicleOwnerAuth from "../controllers/auth/vehicle-owner-auth.controller";
 import vehicleController from "../controllers/vehicle.controller";
 import interactionController from "../controllers/interaction/interaction.controller"
+import diagnosticController from "../controllers/interaction/diagnostic.controller"
+
 const router = express.Router();
 
 router.use("/vehicle-owner", vehicleOwnerRoutes);
@@ -18,5 +20,6 @@ router.use("/auth/mechanic", mechanicAuth);
 router.use("/auth/vehicle-owner", vehicleOwnerAuth);
 router.use("/vehicle", vehicleController);
 router.use("/interaction", interactionController);
+router.use("/interaction/diagnostic", diagnosticController);
 
 export default router;

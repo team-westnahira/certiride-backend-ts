@@ -1,6 +1,5 @@
-import express, { Request, Response, Router } from "express";
+import express, { Response, Router } from "express";
 import prisma from "../../config/prisma";
-import { Mechanic } from "@prisma/client";
 import { z } from "zod";
 import axiosInstance from "../../config/axios";
 import { VehicleBlockChainModel } from "../../models/vehicle.model";
