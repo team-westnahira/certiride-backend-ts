@@ -20,6 +20,12 @@ export type VehicleRegistrationData = {
     authenticity_score: number;
 };
 
+export type DiagnosticReportData = {
+    diagnostic_date: string;
+    time: string;
+    system_checks: { system_name: string; condition: string; detail: string }[];
+    authenticity_score: number;
+};
 
 export interface AuthenticatedMechanicRequest extends Request {
     user?: Mechanic
