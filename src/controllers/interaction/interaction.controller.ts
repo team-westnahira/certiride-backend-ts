@@ -1,20 +1,17 @@
 import express, { Request, Response, Router } from "express";
-import prisma from "../config/prisma";
+import prisma from "../../config/prisma";
 import { Mechanic } from "@prisma/client";
 import { z } from "zod";
-import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
-import axiosInstance from "../config/axios";
-import { VehicleBlockChainModel } from "../models/vehicle.model";
+import axiosInstance from "../../config/axios";
+import { VehicleBlockChainModel } from "../../models/vehicle.model";
 import { randomUUID } from "crypto";
-import mechanicAuthMiddleware from "../middleware/mechanic.middleware";
+import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
+import vehicleOwnerAuthMiddleware from "../../middleware/vehicleOwner.middleware";
+import { AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest } from "../../types";
 
 const router = Router();
 
-interface AuthenticatedRequest extends Request {
-    user?: Mechanic
-}
-
-router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:AuthenticatedRequest , res:Response) => {
+router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:AuthenticatedMechanicRequest , res:Response) => {
 
     const newInteractionSchema = z.object({
         vehicle_id: z.number().min(1, "Vehicle ID is required"),
@@ -116,8 +113,7 @@ router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:Authe
 
 })
 
-
-router.get('/close-interaction' , mechanicAuthMiddleware() , async (req:AuthenticatedRequest , res:Response) => {
+router.get('/close-interaction' , mechanicAuthMiddleware() , async (req:AuthenticatedMechanicRequest , res:Response) => {
 
     const vehicleId = req.query.vehicle_id as string
     const interactionId = req.query.interaction_id as string
@@ -188,5 +184,62 @@ router.get('/close-interaction' , mechanicAuthMiddleware() , async (req:Authenti
 
 })
 
+router.get('/get-interaction' , vehicleOwnerAuthMiddleware() , async (req:AuthenticatedVehicleOwnerRequest , res:Response) => {
 
-export default router
+    const vehicleId = req.query.vehicle_id as string
+    const interactionId = req.query.interaction_id as string
+
+    if (!vehicleId || !interactionId) {
+        res.status(400).json({ message: "Vehicle ID and Interaction ID are required" });
+        return
+    }
+
+    if(!req.user){
+        res.status(401).json({ message: "Unauthorized. User not authenticated." });
+        return 
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+        where: { vin: vehicleId , ownerId: req.user.id },
+    });
+
+    if (!vehicle) {
+        res.status(404).json({ message: "Vehicle not found" });
+        return
+    }
+
+    const vehicleOwner = await prisma.vehicleOwner.findUnique({
+        where: { id: vehicle.ownerId },
+    });
+
+    if (!vehicleOwner) {
+        res.status(404).json({ message: "Vehicle owner not found" });
+        return
+    }
+
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic}`)
+    const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
+    const interaction = vehicleChainData.interaction.find(interaction => interaction.interaction_id === interactionId)
+
+    if (!interaction) {
+        res.status(404).json({ message: "Interaction not found" });
+        return
+    }
+
+    if (+vehicle.ownerId !== req.user.id) {
+        res.status(400).json({ message: "You cannot view this interaction" });
+        return
+    }
+
+    res.status(200).json({
+        interaction,
+        userId: vehicleOwner.id,
+        vehicleId: vehicle.vin,
+    });
+    return
+
+
+})
+
+
+export default router 

@@ -1,3 +1,6 @@
+import { Admin, Mechanic, VehicleOwner } from "@prisma/client";
+import express, { Request } from "express";
+
 export type VehicleRegistrationData = {
     vehicle_registration_number: string;
     owner_name: string;
@@ -16,3 +19,16 @@ export type VehicleRegistrationData = {
     district?: string;
     authenticity_score: number;
 };
+
+
+export interface AuthenticatedMechanicRequest extends Request {
+    user?: Mechanic
+}
+
+export interface AuthenticatedAdminRequest extends Request {
+    user?: Admin
+}
+
+export interface AuthenticatedVehicleOwnerRequest extends Request {
+    user?: VehicleOwner
+}
