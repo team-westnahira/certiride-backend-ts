@@ -35,7 +35,7 @@ export const handleCaluclateServiceReocordScore = (vehicle: VehicleBlockChainMod
     // milage difference between initial mileage and the last service record mileage
 
     vehicle.interaction.forEach((interaction) => {
-        if (interaction.service_record) {
+        if (interaction.service_record && interaction.service_record.record_id != '') {
             allServiceRecords.push(interaction.service_record);
         }
     });
@@ -74,7 +74,7 @@ export const handleCaluclateAccidentRepairScore = (vehicle: VehicleBlockChainMod
     // gather accident types and calculate the score based on the severity and missing documents
 
     const accidentRepairs = vehicle.interaction.filter(
-        (i) => i.accident_repair_record !== null
+        (i) => i.accident_repair_record?.record_id !== ''
     );
 
     if (accidentRepairs.length === 0) return 100 * WEIGHT;
@@ -110,7 +110,7 @@ export const handleCalculateTroubleshootRepairScore = (vehicle: VehicleBlockChai
     const WEIGHT = 0.15;
 
     const troubleshootRepairs = vehicle.interaction.filter(
-        (i) => i.troubleshoot_repair_record !== null
+        (i) => i.troubleshoot_repair_record?.record_id !== ''
     );
 
     if (troubleshootRepairs.length === 0) return 100 * WEIGHT;
@@ -149,7 +149,7 @@ export const handleCalculateTroubleshootRepairScore = (vehicle: VehicleBlockChai
 export const calculateMaintenanceChecklistScore = (vehicle: VehicleBlockChainModel) => {
     const WEIGHT = 0.15;
     const maintenanceRecords = vehicle.interaction.filter(
-        (i) => i.maintenance_checklist !== null
+        (i) => i.maintenance_checklist?.checklist_id !== ''
     );
 
     if (!maintenanceRecords.length) return 100 * WEIGHT;
@@ -183,7 +183,7 @@ export const calculateMaintenanceChecklistScore = (vehicle: VehicleBlockChainMod
 export const calculateDiagnosticReportScore = (vehicle:VehicleBlockChainModel): number => {
     
     const diagnosticRepairs = vehicle.interaction.filter(
-        (i) => i.troubleshoot_repair_record !== null
+        (i) => i.troubleshoot_repair_record?.record_id !== ''
     );
 
     let totalChecks = 0;
