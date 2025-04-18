@@ -90,8 +90,16 @@ router.post('/register', async (req: Request, res: Response) => {
         });
 
         // call the blockchain service to create a new user wallet
-        const response = await axiosInstance.get('/enrollUser/' + nic);
-        console.log(response)
+        try{
+            const response = await axiosInstance.get('/enrollUser/' + nic);
+            console.log(response)
+        }catch(err){
+            await prisma.vehicleOwner.delete({
+                where: { id: newUser.id }
+            });
+            res.status(500).json({ message: "Error creating user wallet in blockchain", error: err });
+            return;
+        }
 
         res.status(201).json({
             message: "New user registered successfully!",
