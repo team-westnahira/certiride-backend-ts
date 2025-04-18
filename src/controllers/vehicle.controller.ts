@@ -12,6 +12,7 @@ import { VehicleRegistrationData } from "../types";
 import axiosInstance from "../config/axios";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
 import { calculateCompositeRating } from "../services/certificate.service";
+import { getDocumentHash } from "../services/hash.service";
 
 const router: Router = express.Router();
 
@@ -97,6 +98,27 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
             }
 
             const result = await analyzeDocument(filePath)
+
+            const fileHash = getDocumentHash(result.content)
+            const existingFileHash = await prisma.fileHash.findUnique({
+                where: { hash: fileHash },
+            });
+
+            if (existingFileHash) {
+                fs.unlinkSync(filePath);
+                res.status(400).json({ message: "File hash already exists" });
+                return
+            }
+
+            await prisma.fileHash.create({
+                data: {
+                    hash: fileHash,
+                    fileName: filePath,
+                    uploadedAt: new Date(),
+                }
+            })
+
+
             const extractedData = await extractVehicleCertificateDocumentData(result.content)
 
             if(extractedData === null){
@@ -127,13 +149,14 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
                 },
             });
 
+
             try{
                 await axiosInstance.post('/invoke' , {
                     fn: 'createVehicle',
                     args: [vehicleCertificate.chassis_number , req.user?.id , newVehicle.manufacture , newVehicle.model, newVehicle.year, color, engineCapacity, province, fuelType],
                     username: req.user?.nic
                 })
-
+    
             }catch(err){
                 res.status(500).json({ message: "Error invoking chaincode. Could not create vehicle asset.", error: err });
                 return;

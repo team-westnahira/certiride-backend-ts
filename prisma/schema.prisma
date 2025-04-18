@@ -107,3 +107,10 @@ model Dispute {
   reviewedBy  Int
   discription String
 }
+
+model FileHash {
+  id        Int      @id @default(autoincrement())
+  hash      String   @unique
+  fileName  String
+  uploadedAt DateTime @default(now())
+}

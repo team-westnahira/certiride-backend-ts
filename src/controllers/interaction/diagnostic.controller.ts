@@ -1,3 +1,4 @@
+import { FileHash } from './../../../node_modules/.prisma/client/index.d';
 import express, { Response, Router } from "express";
 import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
 import { AuthenticatedMechanicRequest, DiagnosticReportData } from "../../types";
@@ -12,6 +13,7 @@ import fileUpload from "express-fileupload";
 import analyzeDocument from "../../services/ocr.service";
 import { extractDiagnosticReportData } from "../../services/ai.service";
 import { DiagnosticReportBlockChainModel } from "../../models/interaction.model";
+import { getDocumentHash } from '../../services/hash.service';
 
 const router = Router();
 
@@ -126,6 +128,27 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
             }
 
             const result = await analyzeDocument(filePath)
+
+            const fileHash = getDocumentHash(result.content)
+
+            const existingFileHash = await prisma.fileHash.findUnique({
+                where: { hash: fileHash },
+            });
+
+            if (existingFileHash) {
+                fs.unlinkSync(filePath);
+                res.status(400).json({ message: "File hash already exists" });
+                return
+            }
+
+            await prisma.fileHash.create({
+                data: {
+                    hash: fileHash,
+                    fileName: filePath,
+                    uploadedAt: new Date(),
+                }
+            })
+
             const extractedData = await extractDiagnosticReportData(result.content)
 
             if(extractedData === null){
@@ -140,7 +163,6 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 return;
             }
 
-
             const report:DiagnosticReportBlockChainModel = {
                 report_id: interaction.interaction_id,
                 vin: vehicle.vin,
@@ -150,7 +172,6 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 system_checks: diagnosticReport.system_checks,
                 attachments: []
             }
-
 
             try{
 
@@ -171,6 +192,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 return
 
             }catch(err){
+                fs.unlinkSync(filePath);
                 console.log(err)
                 res.status(500).json({ message: "Internal server error. Could not add diagnostic report." });
                 return
