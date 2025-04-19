@@ -27,6 +27,29 @@ export type DiagnosticReportData = {
     authenticity_score: number;
 };
 
+
+export type InvoiceData = {
+    invoice_number: string;
+    invoice_date: string;
+    items: {
+        item_id: string;
+        description: string;
+        quantity: number;
+        unit_cost: number;
+        total_cost: number;
+    }[];
+    sub_total: number;
+    discount: number;
+    tax: number;
+    total: number;
+    payment_status: string;
+    remarks: string;
+    authenticity_score: number;
+    current_mileage: number;
+    chassis_no: string;
+}
+
+
 export interface AuthenticatedMechanicRequest extends Request {
     user?: Mechanic
 }

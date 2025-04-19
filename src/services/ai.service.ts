@@ -32,3 +32,21 @@ export const extractDiagnosticReportData =  async (data:string) => {
   });
   return completion.choices[0].message.content
 }
+
+
+
+export const extractInvoiceData =  async (data:string) => {
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "user",
+        content: `
+          You are an expert invoice parsing engine. Extract the following fields from a scanned invoice string and return structured JSON object with the following fields:
+          invoice_number invoice_date( invoice_date should be in this format - YYYY-MM-DD) items (array of: item_id, description, quantity (round the quantity to nearest integer), unit_cost, total_cost) sub_total discount tax total payment_status remarks current_mileage chassis no and  authenticity_score. Include all fields, even if data is missing. Also include an "authenticity_score" between 0 and 1 based on confidence in data validity (make sure it is a invoice. if it is any other doc, lower the score).  (only the JSON string. remove unnessesory \`\`\` json characters ).
+        ` + data,
+      },
+    ],
+  });
+  return completion.choices[0].message.content
+}
