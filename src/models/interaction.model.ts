@@ -14,7 +14,7 @@ export type VehicleInteractionBlockChainModel = {
     troubleshoot_repair_record: TroubleshootRepairRecord | null;
     maintenance_checklist: MaintenanceChecklist | null;
     diagnostic_report: DiagnosticReportBlockChainModel | null;
-    invoice: any;
+    invoice: ServiceInvoiceBlockChainModel | null;
     additional_info: string | null;
     created_at: Date;
 }
@@ -95,3 +95,28 @@ export type DiagnosticReportBlockChainModel = {
     system_checks: DiagnosticSystemCheckBlockChainModel[];
     attachments: AttachmentBlockChainModel[];
 };
+
+
+export type ServiceInvoiceBlockChainModel = {
+    invoice_id: string;
+    invoice_number: string;
+    invoice_date: string;
+    vehicle_id: string;
+    mechanic_id: string;
+    items: InvoiceItemBlockChainModel[];
+    sub_total: number;
+    discount: number;
+    tax: number;
+    total: number;
+    payment_status: string;
+    remarks: string;
+    attachments: AttachmentBlockChainModel[];
+}
+
+export type InvoiceItemBlockChainModel = {
+    item_id: string;
+    description: string;
+    quantity: number;
+    unit_cost: number;
+    total_cost: number;
+}

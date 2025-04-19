@@ -1,4 +1,3 @@
-import { FileHash } from './../../../node_modules/.prisma/client/index.d';
 import express, { Response, Router } from "express";
 import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
 import { AuthenticatedMechanicRequest, DiagnosticReportData } from "../../types";
@@ -127,28 +126,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 return
             }
 
-            const result = await analyzeDocument(filePath)
-
-            const fileHash = getDocumentHash(result.content)
-
-            const existingFileHash = await prisma.fileHash.findUnique({
-                where: { hash: fileHash },
-            });
-
-            if (existingFileHash) {
-                fs.unlinkSync(filePath);
-                res.status(400).json({ message: "File hash already exists" });
-                return
-            }
-
-            await prisma.fileHash.create({
-                data: {
-                    hash: fileHash,
-                    fileName: filePath,
-                    uploadedAt: new Date(),
-                }
-            })
-
+            const result = await analyzeDocument(filePath);
             const extractedData = await extractDiagnosticReportData(result.content)
 
             if(extractedData === null){
