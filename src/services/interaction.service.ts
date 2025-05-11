@@ -72,7 +72,7 @@ export const commonInteractionChecker = async (req:AuthenticatedMechanicRequest,
     }
 
     if(new Date() < new Date(interaction.interaction_date)) {
-        throw new Error("Diagnostic date cannot be in the future");
+        throw new Error("Date cannot be in the future");
     }
 
     if(interaction.mechanic_id !== req.user.mechanicId+'') {

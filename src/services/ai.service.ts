@@ -33,8 +33,6 @@ export const extractDiagnosticReportData =  async (data:string) => {
   return completion.choices[0].message.content
 }
 
-
-
 export const extractInvoiceData =  async (data:string) => {
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -44,6 +42,23 @@ export const extractInvoiceData =  async (data:string) => {
         content: `
           You are an expert invoice parsing engine. Extract the following fields from a scanned invoice string and return structured JSON object with the following fields:
           invoice_number invoice_date( invoice_date should be in this format - YYYY-MM-DD) items (array of: item_id, description, quantity (round the quantity to nearest integer), unit_cost, total_cost) sub_total discount tax total payment_status remarks current_mileage chassis no and  authenticity_score. Include all fields, even if data is missing. Also include an "authenticity_score" between 0 and 1 based on confidence in data validity (make sure it is a invoice. if it is any other doc, lower the score).  (only the JSON string. remove unnessesory \`\`\` json characters ).
+        ` + data,
+      },
+    ],
+  });
+  return completion.choices[0].message.content
+}
+
+export const extractMaintenanceChecklistData =  async (data:string) => {
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "user",
+        content: `
+          You are an expert vehicle maintenance checklist parsing engine. Extract the following fields from a scanned vehicle maintenance checklist string and return structured JSON object with the following fields:
+          next_service_mileage, items (each item contains itemName , comments and its condition. condition can be checked (shown with checked mark) , Adjusted (A) , Problem (with crossed mark) , clean (C) , replaced (R) ). give me the full condition text. not just the character. Those marks are marked with hardwriting on a checklist form next to the item. so sometimes ocr might not read it correctly. your job is to capture it correctly )
+          remarks, authenticity_score and service_type. Include all fields, even if data is missing. Also include an "authenticity_score" between 0 and 1 based on confidence in data validity (make sure it is a vehicle maintenance checklist. if it is any other doc, lower the score).  (only the JSON string. remove unnessesory \`\`\` json characters ).
         ` + data,
       },
     ],

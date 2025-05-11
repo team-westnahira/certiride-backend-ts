@@ -1,5 +1,6 @@
 import { Admin, Mechanic, VehicleOwner } from "@prisma/client";
 import express, { Request } from "express";
+import { MaintenanceChecklistItem } from "./models/interaction.model";
 
 export type VehicleRegistrationData = {
     vehicle_registration_number: string;
@@ -47,6 +48,18 @@ export type InvoiceData = {
     authenticity_score: number;
     current_mileage: number;
     chassis_no: string;
+}
+
+
+export type MaintananceChecklistData = {
+    next_service_mileage: number;
+    items: MaintenanceChecklistItem[];
+    remarks: string;
+    authenticity_score: number;
+    inspection_date: string;
+    meter_reading: number;
+    vehicle_power_type: string;
+    service_type: string;
 }
 
 

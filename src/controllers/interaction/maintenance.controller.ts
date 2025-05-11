@@ -1,6 +1,6 @@
 import express, { Response, Router } from "express";
 import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
-import { AuthenticatedMechanicRequest, DiagnosticReportData } from "../../types";
+import { AuthenticatedMechanicRequest, DiagnosticReportData, MaintananceChecklistData } from "../../types";
 import { z } from "zod";
 import prisma from "../../config/prisma";
 import axiosInstance from "../../config/axios";
@@ -10,31 +10,32 @@ import path from "path";
 import fs from 'fs'
 import fileUpload from "express-fileupload";
 import analyzeDocument from "../../services/ocr.service";
-import { extractDiagnosticReportData } from "../../services/ai.service";
-import { DiagnosticReportBlockChainModel, VehicleInteractionBlockChainModel } from "../../models/interaction.model";
+import { extractDiagnosticReportData, extractMaintenanceChecklistData } from "../../services/ai.service";
+import { MaintenanceChecklist, VehicleInteractionBlockChainModel } from "../../models/interaction.model";
 import { getDocumentHash } from '../../services/hash.service';
 import { VehicleOwner } from "@prisma/client";
+import { randomUUID } from "crypto";
 
 const router = Router();
 
 
-router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req:AuthenticatedMechanicRequest , res:Response) => {
+router.post('/add-maintenance-checklist' , mechanicAuthMiddleware() , async (req:AuthenticatedMechanicRequest , res:Response) => {
 
     if (!req.headers["content-type"]?.includes("multipart/form-data")) {
         res.status(400).json({ message: "Invalid content type. Use multipart/form-data." });
-        return 
+        return
     }
 
-    const newDiagnosticSchema = z.object({
+    const scheme = z.object({
         vehicle_id: z.string().min(1, "Vehicle ID is required"),
         interaction_id: z.string().min(1, "Interaction ID is required"),
-        diagnostic_date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+        date: z.string().refine((val) => !isNaN(Date.parse(val)), {
             message: "Invalid date format",
         }),
         mileage: z.string().min(1, "Mileage is required"),
     });
 
-    const parsedData = newDiagnosticSchema.safeParse(req.body);
+    const parsedData = scheme.safeParse(req.body);
 
     if (!parsedData.success) {
         res.status(400).json({
@@ -44,7 +45,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
         return
     }
 
-    const { vehicle_id, interaction_id, diagnostic_date, mileage } = parsedData.data;
+    const { vehicle_id, interaction_id, date, mileage } = parsedData.data;
 
     let data: {
         interaction: VehicleInteractionBlockChainModel;
@@ -62,10 +63,10 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
 
     try{
 
-        const file = req.files?.registrationCertificate as fileUpload.UploadedFile;
+        const file = req.files?.checklistFile as fileUpload.UploadedFile;
         
         if (!file) {
-            res.status(400).json({ message: "Vehicle Certification File is required" });
+            res.status(400).json({ message: "Checklist File is required" });
             return
         }
 
@@ -81,7 +82,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
             return
         }
     
-        const uploadDir = path.join(__dirname, "../../../uploads/vehicles/diagnostic-reports");
+        const uploadDir = path.join(__dirname, "../../../uploads/vehicles/checklist-reports");
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -107,40 +108,44 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 return
             }
 
-            const extractedData = await extractDiagnosticReportData(result.content)
+            const extractedData = await extractMaintenanceChecklistData(result.content)
 
             if(extractedData === null){
                 await prisma.fileHash.delete({
                     where: { hash: hash },
                 });
-                res.status(400).json({ message: "Error extracting diagnostic data from the document." });
+                res.status(400).json({ message: "Error extracting checklist data from the document." });
                 return;
             }
 
-            const diagnosticReport:DiagnosticReportData = JSON.parse(extractedData)
+            const checkList:MaintananceChecklistData = JSON.parse(extractedData)
             
-            if(diagnosticReport.authenticity_score < 0.7){
+            if(checkList.authenticity_score < 0.7){
                 await prisma.fileHash.delete({
                     where: { hash: hash },
                 });
-                res.status(400).json({ message: "The extracted diagnostic data is not authentic." });
+                res.status(400).json({ message: "The extracted checklist data is not authentic." });
                 return;
             }
 
-            const report:DiagnosticReportBlockChainModel = {
-                report_id: data.interaction.interaction_id,
-                vin: data.vehicleChainData.vin,
+            const report:MaintenanceChecklist = {
+                checklist_id: randomUUID(),
+                vehicle_id: data.interaction.vehicle_id,
                 mechanic_id: data.interaction.mechanic_id,
-                diagnostic_date: new Date(diagnostic_date).toISOString(),
-                observations: "",
-                system_checks: diagnosticReport.system_checks,
+                date_of_inspection: checkList.inspection_date,
+                vehicle_power_type: checkList.vehicle_power_type,
+                odometer_reading: +checkList.meter_reading,
+                next_service_mileage: 0,
+                items: checkList.items,
+                service_type: "",
+                remarks: "",
                 attachments: []
             }
 
             try{
 
                 await axiosInstance.post('/invoke' , {
-                    'fn': 'InsertDiagnosticReport',
+                    'fn': 'InsertMaintenanceCheckListReport',
                     'args': [
                         data.interaction.interaction_id,
                         data.vehicleChainData.vin,
@@ -150,8 +155,8 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 })
 
                 res.status(200).json({ 
-                    message: "Diagnostic report added successfully",
-                    diagnosticReport
+                    message: "checklist report added successfully",
+                    report
                 });
                 return
 
@@ -161,7 +166,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 });
                 fs.unlinkSync(filePath);
                 console.log(err)
-                res.status(500).json({ message: "Internal server error. Could not add diagnostic report." });
+                res.status(500).json({ message: "Internal server error. Could not add checklist report." });
                 return
             }
 
@@ -169,7 +174,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
 
     }catch(err){
         console.log(err)
-        res.status(500).json({ message: "Internal server error. Could not add diagnostic report." });
+        res.status(500).json({ message: "Internal server error. Could not add checklist report." });
         return
     }
 
