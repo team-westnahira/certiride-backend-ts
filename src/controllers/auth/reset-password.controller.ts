@@ -4,6 +4,8 @@ import { z } from "zod";
 import prisma from "../../config/prisma";
 import { generateSecureOtp } from "../../utils/otpGenerator";
 import bcrypt from "bcryptjs";
+import { sendEmail } from "../../services/email.service";
+import { resetPasswordTemplate } from "../../templates/email/resetPassword";
 
 dotenv.config();
 const router = express.Router();
@@ -49,6 +51,12 @@ router.post('/vehicle-owner/gen-token' , async (req:Request , res:Response) => {
                 expirationTime: new Date(Date.now() + 1 * 60 * 60 * 1000),
                 tokenValue: otp
             },
+        });
+
+        await sendEmail({
+            to: owner.email,
+            subject: 'Certiride Reset Password OTP',
+            html:resetPasswordTemplate(otp)
         });
 
         res.json({
