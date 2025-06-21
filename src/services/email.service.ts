@@ -1,10 +1,14 @@
+import dotenv from "dotenv";
 import nodemailer from 'nodemailer';
+dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASS,
+    user: process.env.EMAIL_USERNAME,
+    pass: process.env.EMAIL_PASSOWRD,
   },
 });
 
@@ -15,8 +19,9 @@ interface EmailOptions {
 }
 
 export const sendEmail = async ({ to, subject, html }: EmailOptions): Promise<void> => {
+  console.log("email cred" , process.env.EMAIL_USERNAME , process.env.EMAIL_PASSOWRD)
   const mailOptions = {
-    from: `"CertiRide" <${process.env.GMAIL_USER}>`,
+    from: `"CertiRide" <${process.env.EMAIL_USERNAME}>`,
     to,
     subject,
     html,
