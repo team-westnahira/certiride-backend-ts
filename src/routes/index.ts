@@ -9,6 +9,7 @@ import vehicleController from "../controllers/vehicle.controller";
 import interactionController from "../controllers/interaction/interaction.controller"
 import diagnosticController from "../controllers/interaction/diagnostic.controller"
 import invoiceController from "../controllers/interaction/invoice.controller"
+import resetPasswordController from '../controllers/auth/reset-password.controller'
 
 const router = express.Router();
 
@@ -19,6 +20,9 @@ router.use("/audit-log", auditLogRoutes);
 router.use("/auth/admin", adminAuth);
 router.use("/auth/mechanic", mechanicAuth);
 router.use("/auth/vehicle-owner", vehicleOwnerAuth);
+
+router.use("/reset-passsword" , resetPasswordController)
+
 router.use("/vehicle", vehicleController);
 router.use("/interaction", interactionController);
 router.use("/interaction/diagnostic", diagnosticController);
