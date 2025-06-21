@@ -26,9 +26,15 @@ const mechanicAuthMiddleware = () => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string; email: string; role?: string };
             const user = await prisma.mechanic.findUnique({ where: { email: decoded.email } });
-            
+            const authToken = await prisma.authToken.findUnique({ where: { tokenValue: token } })
+
             if(!user){
                 res.status(404).json({ message: "User account not found." });
+                return
+            }
+
+            if(!authToken){
+                res.status(401).json({ error: "Unauthorized: Token revoked" });
                 return
             }
     
