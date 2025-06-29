@@ -124,4 +124,6 @@ model File {
   uploadedAt     DateTime  @default(now())
   uploadedById   Int
   vehicleId      Int
+  extractedData  String
+  category       String
 }

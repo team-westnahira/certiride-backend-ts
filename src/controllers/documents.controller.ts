@@ -5,6 +5,9 @@ import path from 'path';
 import { UploadedFile } from 'express-fileupload';
 import { z } from 'zod';
 import vehicleOwnerAuthMiddleware from '../middleware/vehicleOwner.middleware';
+import { analyzeVehicleDocument } from '../services/ai.service';
+import analyzeDocument from '../services/ocr.service';
+import fs from 'fs';
 
 const router = express.Router();
 const uploadDir = path.join(__dirname, '../../uploads/documents');
@@ -25,7 +28,7 @@ router.post(
       }
 
       const schema = z.object({
-        vehicleId: z.number(),
+        vehicleId: z.string().min(1, 'vehicle id is required'),
       });
 
       const parsedData = schema.safeParse(req.body);
@@ -44,12 +47,16 @@ router.post(
       }
 
       const vehicle = await prisma.vehicle.findUnique({
-        where: { vehicleId: parsedData.data.vehicleId, ownerId: req.user.id },
+        where: { vehicleId: +parsedData.data.vehicleId, ownerId: req.user.id },
       });
 
       if (!vehicle) {
         res.status(404).json({ message: 'Vehicle not found or does not belong to user.' });
         return;
+      }
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
       }
 
       const uploaded = req.files.file as UploadedFile;
@@ -58,9 +65,14 @@ router.post(
 
       uploaded.mv(savePath, async (err) => {
         if (err) {
+          console.log(err);
           res.status(500).json({ error: 'File upload failed' });
           return;
         }
+
+        // handle document analysis in the background!
+        const result = await analyzeDocument(savePath);
+        const extractedData = await analyzeVehicleDocument(result);
 
         const uploadedFile = await prisma.file.create({
           data: {
@@ -69,13 +81,13 @@ router.post(
             fileSize: uploaded.size,
             fileType: uploaded.mimetype,
             uploadedById: req.user?.id || 0,
-            vehicleId: parsedData.data.vehicleId,
+            vehicleId: +parsedData.data.vehicleId,
+            extractedData: JSON.stringify(extractedData),
+            category: extractedData.document_type,
           },
         });
 
-        // handle document analysis in the background!
-
-        res.json({ message: 'File uploaded successfullt', uploadedFile });
+        res.json({ message: 'File uploaded successfully', uploadedFile });
         return;
       });
     } catch (err: any) {
@@ -85,6 +97,24 @@ router.post(
       });
 
       return;
+    }
+  }
+);
+
+router.get(
+  '/my-files',
+  vehicleOwnerAuthMiddleware(),
+  async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+    try {
+      const files = await prisma.file.findMany({
+        where: { uploadedById: req.user?.id || 0 },
+        orderBy: { uploadedAt: 'desc' },
+      });
+
+      res.json(files);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Could not retrieve files' });
     }
   }
 );
