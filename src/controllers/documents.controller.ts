@@ -77,7 +77,7 @@ router.post(
         const uploadedFile = await prisma.file.create({
           data: {
             originalName: uploaded.name,
-            uniquePath: savePath,
+            uniquePath: fileName,
             fileSize: uploaded.size,
             fileType: uploaded.mimetype,
             uploadedById: req.user?.id || 0,
@@ -149,6 +149,37 @@ router.get(
     } catch (error) {
       console.error('File search error:', error);
       res.status(500).json({ error: 'Error searching files' });
+      return;
+    }
+  }
+);
+
+router.get(
+  '/download/:id',
+  vehicleOwnerAuthMiddleware(),
+  async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+    const userId = (req.user as any).id;
+    const fileId = Number(req.params.id);
+
+    try {
+      const file = await prisma.file.findFirst({
+        where: {
+          id: fileId,
+          uploadedById: userId,
+        },
+      });
+
+      if (!file) {
+        res.status(404).json({ error: 'File not found or access denied' });
+        return;
+      }
+
+      const filePath = path.join(__dirname, '..', '..', 'uploads', 'documents', file.uniquePath);
+      res.download(filePath, file.originalName);
+      return;
+    } catch (err) {
+      console.error('Download error:', err);
+      res.status(500).json({ error: 'Error downloading file' });
       return;
     }
   }
