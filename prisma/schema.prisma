@@ -114,3 +114,15 @@ model FileHash {
   fileName  String
   uploadedAt DateTime @default(now())
 }
+
+model File {
+  id             Int       @id @default(autoincrement())
+  originalName   String
+  uniquePath     String    @unique
+  fileSize       Int       
+  fileType       String   
+  downloadCount  Int       @default(0)
+  uploadedAt     DateTime  @default(now())
+  uploadedById   Int
+  vehicleId      Int
+}

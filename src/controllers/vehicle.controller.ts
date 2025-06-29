@@ -8,7 +8,7 @@ import path from "path";
 import fs from "fs";
 import { extractVehicleCertificateDocumentData } from "../services/ai.service";
 import analyzeDocument from "../services/ocr.service";
-import { VehicleRegistrationData } from "../types";
+import { AuthenticatedVehicleOwnerRequest, VehicleRegistrationData } from "../types";
 import axiosInstance from "../config/axios";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
 import { calculateCompositeRating } from "../services/certificate.service";
@@ -16,11 +16,8 @@ import { getDocumentHash } from "../services/hash.service";
 
 const router: Router = express.Router();
 
-interface AuthenticatedRequest extends Request {
-    user?: VehicleOwner;
-}
 
-router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
 
     try {
 
@@ -185,7 +182,7 @@ router.post("/add-new-vehicle" , vehicleOwnerAuthMiddleware(), async (req: Authe
 });
 
 
-router.get('/get-user-vehicles' , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/get-user-vehicles' , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
     try{
 
         if (!req.user) {
@@ -213,7 +210,7 @@ router.get('/get-user-vehicles' , vehicleOwnerAuthMiddleware(), async (req: Auth
 })
 
 
-router.get('/get-vehicle-full-data' , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/get-vehicle-full-data' , vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
     try{
 
         if (!req.user) {
@@ -254,7 +251,7 @@ router.get('/get-vehicle-full-data' , vehicleOwnerAuthMiddleware(), async (req: 
 })
 
 
-router.get('/generate-certificate', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/generate-certificate', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
     try {
         const { vin } = req.query;
     
