@@ -119,4 +119,39 @@ router.get(
   }
 );
 
+router.get(
+  '/search',
+  vehicleOwnerAuthMiddleware(),
+  async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+    const userId = (req.user as any).id;
+    const query = req.query.query?.toString().trim();
+
+    if (!query) {
+      res.status(400).json({ error: 'Missing search query' });
+      return;
+    }
+
+    try {
+      const results = await prisma.file.findMany({
+        where: {
+          uploadedById: userId,
+          originalName: {
+            contains: query.toLowerCase(),
+          },
+        },
+        orderBy: {
+          uploadedAt: 'desc',
+        },
+      });
+
+      res.json(results);
+      return;
+    } catch (error) {
+      console.error('File search error:', error);
+      res.status(500).json({ error: 'Error searching files' });
+      return;
+    }
+  }
+);
+
 export default router;
