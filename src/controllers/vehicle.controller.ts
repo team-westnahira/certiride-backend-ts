@@ -319,6 +319,7 @@ router.get(
     } catch (err: any) {
       console.error('Error :', err);
       res.status(500).json({ message: 'Internal server error', error: err.message });
+      return;
     }
   }
 );
@@ -358,10 +359,9 @@ router.get(
       // generatePDF('./src/templates/pdf/overview-certificate.html')
 
       res.status(200).json({
-        message: 'Certificate generated successfully.',
+        message: 'vehicle score fetched successfully',
         vehicle,
         score,
-        fullDetails,
       });
       return;
     } catch (error: any) {
