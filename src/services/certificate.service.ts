@@ -59,7 +59,7 @@ export const handleCaluclateServiceReocordScore = (vehicle: VehicleBlockChainMod
     }
   });
 
-  const mileage = allServiceRecords[allServiceRecords.length - 1].mileage;
+  const mileage = allServiceRecords[allServiceRecords.length - 1]?.mileage || 0;
   const age = new Date().getFullYear() - vehicle.year;
 
   const expectedByMileage = mileage / SERVICE_KM_INTERVAL;
