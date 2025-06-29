@@ -1,48 +1,92 @@
 import express, { Response } from 'express';
 import prisma from '../config/prisma';
-import { addAuditLog } from '../services/auditlog.service';
 import { AuthenticatedVehicleOwnerRequest } from '../types';
 import path from 'path';
 import { UploadedFile } from 'express-fileupload';
+import { z } from 'zod';
+import vehicleOwnerAuthMiddleware from '../middleware/vehicleOwner.middleware';
 
 const router = express.Router();
 const uploadDir = path.join(__dirname, '../../uploads/documents');
 
-router.post('/upload', (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
-  try {
-    if (!req.headers['content-type']?.includes('multipart/form-data')) {
-      res.status(400).json({ message: 'Invalid content type. Use multipart/form-data.' });
-      return;
-    }
-
-    if (!req.files || !req.files.file) {
-      res.status(400).json({ error: 'No file uploaded' });
-      return;
-    }
-
-    const uploaded = req.files.file as UploadedFile;
-
-    const fileName = `${Date.now()}-${uploaded.name}`;
-    const savePath = path.join(uploadDir, fileName);
-
-    uploaded.mv(savePath, (err) => {
-      if (err) {
-        res.status(500).json({ error: 'File upload failed' });
+router.post(
+  '/upload',
+  vehicleOwnerAuthMiddleware(),
+  async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+    try {
+      if (!req.headers['content-type']?.includes('multipart/form-data')) {
+        res.status(400).json({ message: 'Invalid content type. Use multipart/form-data.' });
         return;
       }
 
-      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${fileName}`;
-      res.json({ message: 'File uploaded', url: fileUrl });
-      return;
-    });
-  } catch (err: any) {
-    res.status(500).json({
-      message: 'Internal server error. Could not uplaod the document.',
-      error: err.message,
-    });
+      if (!req.files || !req.files.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
 
-    return;
+      const schema = z.object({
+        vehicleId: z.number(),
+      });
+
+      const parsedData = schema.safeParse(req.body);
+
+      if (!parsedData.success) {
+        res.status(400).json({
+          error: 'Validation failed',
+          issues: parsedData.error.errors,
+        });
+        return;
+      }
+
+      if (!req.user) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
+
+      const vehicle = await prisma.vehicle.findUnique({
+        where: { vehicleId: parsedData.data.vehicleId, ownerId: req.user.id },
+      });
+
+      if (!vehicle) {
+        res.status(404).json({ message: 'Vehicle not found or does not belong to user.' });
+        return;
+      }
+
+      const uploaded = req.files.file as UploadedFile;
+      const fileName = `${Date.now()}-${uploaded.name}`;
+      const savePath = path.join(uploadDir, fileName);
+
+      uploaded.mv(savePath, async (err) => {
+        if (err) {
+          res.status(500).json({ error: 'File upload failed' });
+          return;
+        }
+
+        const uploadedFile = await prisma.file.create({
+          data: {
+            originalName: uploaded.name,
+            uniquePath: savePath,
+            fileSize: uploaded.size,
+            fileType: uploaded.mimetype,
+            uploadedById: req.user?.id || 0,
+            vehicleId: parsedData.data.vehicleId,
+          },
+        });
+
+        // handle document analysis in the background!
+
+        res.json({ message: 'File uploaded successfullt', uploadedFile });
+        return;
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        message: 'Internal server error. Could not uplaod the document.',
+        error: err.message,
+      });
+
+      return;
+    }
   }
-});
+);
 
 export default router;

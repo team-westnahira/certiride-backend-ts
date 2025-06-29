@@ -121,7 +121,6 @@ model File {
   uniquePath     String    @unique
   fileSize       Int       
   fileType       String   
-  downloadCount  Int       @default(0)
   uploadedAt     DateTime  @default(now())
   uploadedById   Int
   vehicleId      Int
