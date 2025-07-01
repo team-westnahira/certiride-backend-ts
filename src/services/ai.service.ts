@@ -93,3 +93,22 @@ export const analyzeVehicleDocument = async (data: string) => {
   const obj: UserFileExtractedType = JSON.parse(completion.choices[0].message.content || '') || {};
   return obj;
 };
+
+export const extractSriLankanNIC = async (text: string) => {
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'user',
+        content:
+          `
+From the following text, extract **only** the Sri Lankan NIC number. It may be in **old format** (9 digits followed by 'V' or 'X', e.g., 902341234V) or **new format** (12 digits, e.g., 199023401234). If no valid NIC is found, return null. Do not include any explanation — just the NIC number as a plain string (e.g., "199023401234").
+            
+Text:
+` + text,
+      },
+    ],
+  });
+
+  return completion.choices[0].message.content;
+};

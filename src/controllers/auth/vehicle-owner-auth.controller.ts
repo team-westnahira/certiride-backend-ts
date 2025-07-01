@@ -8,6 +8,8 @@ import { generateOtp } from '../../utils/otpGenerator';
 import { VehicleOwner } from '@prisma/client';
 import vehicleOwnerAuthMiddleware from '../../middleware/vehicleOwner.middleware';
 import axiosInstance from '../../config/axios';
+import { analyzeDocumentInMemory } from '../../services/ocr.service';
+import { extractSriLankanNIC } from '../../services/ai.service';
 
 interface AuthenticatedRequest extends Request {
   user?: VehicleOwner;
@@ -18,6 +20,11 @@ const router = express.Router();
 const sriLankanNICRegex = /^(?:\d{9}[VX]|\d{12})$/;
 
 router.post('/register', async (req: Request, res: Response) => {
+  if (!req.headers['content-type']?.includes('multipart/form-data')) {
+    res.status(400).json({ message: 'Invalid content type. Use multipart/form-data.' });
+    return;
+  }
+
   try {
     const vehicleOwnerRegisterSchema = z.object({
       firstName: z.string().min(1, 'First name is required'),
@@ -40,6 +47,12 @@ router.post('/register', async (req: Request, res: Response) => {
         error: 'Validation failed',
         issues: parsedData.error.errors,
       });
+      return;
+    }
+
+    const file = req.files?.nicImage;
+    if (!file || Array.isArray(file)) {
+      res.status(400).json({ message: 'NIC front image is required.' });
       return;
     }
 
@@ -69,6 +82,22 @@ router.post('/register', async (req: Request, res: Response) => {
 
     if (existingUser) {
       res.status(400).json({ error: 'Phone is already used' });
+      return;
+    }
+
+    const extractedText = await analyzeDocumentInMemory(file.data);
+    const extractedNIC = await extractSriLankanNIC(extractedText);
+
+    if (!extractedNIC) {
+      res.status(400).json({ message: 'Could not extract NIC number from image.' });
+      return;
+    }
+
+    if (extractedNIC !== nic) {
+      res.status(400).json({
+        message: 'NIC number does not match the number found in the uploaded image.',
+        extractedNIC,
+      });
       return;
     }
 
