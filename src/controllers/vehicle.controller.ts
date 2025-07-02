@@ -167,10 +167,10 @@ router.post(
             fn: 'createVehicle',
             args: [
               vehicleCertificate.chassis_number,
-              req.user?.id,
+              req.user?.id + '',
               newVehicle.manufacture,
               newVehicle.model,
-              newVehicle.year,
+              newVehicle.year + '',
               color,
               engineCapacity,
               province,
