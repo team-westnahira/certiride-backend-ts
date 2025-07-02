@@ -100,15 +100,21 @@ export const extractSriLankanNIC = async (text: string) => {
     messages: [
       {
         role: 'user',
-        content:
-          `
-From the following text, extract **only** the Sri Lankan NIC number. It may be in **old format** (9 digits followed by 'V' or 'X', e.g., 902341234V) or **new format** (12 digits, e.g., 199023401234). If no valid NIC is found, return null. Do not include any explanation — just the NIC number as a plain string (e.g., "199023401234").
-            
+        content: `
+Given the following OCR-extracted text from the front side of a Sri Lankan National Identity Card (NIC), extract only the NIC number.
+
+A valid NIC number is:
+- New format: exactly 12 digits (e.g., 200024300415)
+- Old format: exactly 9 digits followed by either 'V' or 'X' (e.g., 902341234V)
+
+Return only the NIC number, with no extra words or symbols. If no valid NIC is found, return: null
+
 Text:
-` + text,
+${text}
+        `.trim(),
       },
     ],
   });
 
-  return completion.choices[0].message.content;
+  return completion.choices[0].message.content?.trim();
 };
