@@ -86,7 +86,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     const extractedText = await analyzeDocumentInMemory(file.data);
-    const extractedNIC = await extractSriLankanNIC(extractedText);
+    const extractedNIC = await extractSriLankanNIC(extractedText.content);
 
     if (!extractedNIC) {
       res.status(400).json({ message: 'Could not extract NIC number from image.' });
@@ -96,7 +96,6 @@ router.post('/register', async (req: Request, res: Response) => {
     if (extractedNIC !== nic) {
       res.status(400).json({
         message: 'NIC number does not match the number found in the uploaded image.',
-        extractedNIC,
       });
       return;
     }
