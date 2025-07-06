@@ -107,7 +107,7 @@ A valid NIC number is:
 - New format: exactly 12 digits (e.g., 200024300415)
 - Old format: exactly 9 digits followed by either 'V' or 'X' (e.g., 902341234V)
 
-Return only the NIC number, with no extra words or symbols. If no valid NIC is found, return: null
+Return only the NIC number, with no extra words or symbols or extra white spaces. If no valid NIC is found, return: null
 
 Text:
 ${text}
