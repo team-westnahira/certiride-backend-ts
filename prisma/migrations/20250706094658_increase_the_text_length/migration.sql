@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `file` MODIFY `extractedData` VARCHAR(1024) NOT NULL;
+ALTER TABLE `File` MODIFY `extractedData` VARCHAR(1024) NOT NULL;
