@@ -13,6 +13,8 @@ import axiosInstance from '../config/axios';
 import { VehicleBlockChainModel } from '../models/vehicle.model';
 import { calculateCompositeRating } from '../services/certificate.service';
 import { getDocumentHash } from '../services/hash.service';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const router: Router = express.Router();
 
@@ -163,6 +165,7 @@ router.post(
         });
 
         try {
+          const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
           await axiosInstance.post('/invoke', {
             fn: 'createVehicle',
             args: [
@@ -176,7 +179,7 @@ router.post(
               province,
               fuelType,
             ],
-            username: req.user?.nic,
+            username: req.user?.nic + appedix,
           });
         } catch (err) {
           res.status(500).json({
@@ -259,13 +262,17 @@ router.get(
         return;
       }
 
-      const data = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${req.user.nic}`);
+      const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
+      const data = await axiosInstance.get(
+        `/query/GetVehicle/${vehicle.vin}/${req.user.nic + appedix}`
+      );
 
       res.status(200).json({
         vehicleOverviewData: vehicle,
         fullDetails: data.data.data,
       });
     } catch (err) {
+      console.log(err);
       res.status(500).json({
         message: 'Internal server error. Could not fetch user vehicles.',
       });
@@ -300,8 +307,9 @@ router.get(
         return;
       }
 
+      const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
       const blockchainResponse = await axiosInstance.get(
-        `/query/GetVehicle/${vin}/${req.user.nic}`
+        `/query/GetVehicle/${vin}/${req.user.nic + appedix}`
       );
       const fullDetails = blockchainResponse.data.data as VehicleBlockChainModel;
 
@@ -350,8 +358,9 @@ router.get(
         return;
       }
 
+      const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
       const blockchainResponse = await axiosInstance.get(
-        `/query/GetVehicle/${vin}/${req.user.nic}`
+        `/query/GetVehicle/${vin}/${req.user.nic + appedix}`
       );
       const fullDetails = blockchainResponse.data.data as VehicleBlockChainModel;
       const score = calculateCompositeRating(fullDetails);
