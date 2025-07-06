@@ -119,7 +119,8 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // call the blockchain service to create a new user wallet
     try {
-      const response = await axiosInstance.get('/enrollUser/' + nic);
+      const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
+      const response = await axiosInstance.get('/enrollUser/' + nic + appedix);
       console.log(response);
     } catch (err) {
       await prisma.vehicleOwner.delete({
