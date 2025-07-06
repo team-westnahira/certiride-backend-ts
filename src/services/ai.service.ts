@@ -61,7 +61,8 @@ export const analyzeVehicleDocument = async (data: string) => {
         content:
           `
             You are given the extracted text from an uploaded document related to a vehicle. Your task is to:
-            1. Identify the document type. Possible types include: "Revenue License", "Emission Certificate", "Insurance Card", "Diagnostic Report", or "Unknown".
+            1. Identify the document type. Possible types include: "Revenue License", "Emission Certificate", "Insurance Card", "Diagnostic Report", or "Unknown" (There maybe aother formats... but all of those other formats should fall into Unknown format).
+            3. If you find any other documents. categorized it as a unknown document.
             2. Return a structured JSON object with the following format:
 
             {
@@ -81,8 +82,10 @@ export const analyzeVehicleDocument = async (data: string) => {
             - Unknown: leave fields empty {}
 
             Set "document_type" to "Unknown" and authenticity_score to a low value (e.g. 0.2) if it doesn’t match any known format.
-
+            Make sure to analyze the given text and correctly identify the type. If you have any difficulty in identifiying it. Just return the type Unknown
             Return only a valid JSON string. Do not include explanations or markdown formatting.
+
+            only categorize the file if type is present in the ocr text
 
             Text to analyze:
           ` + data,

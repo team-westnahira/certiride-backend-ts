@@ -72,8 +72,8 @@ router.post(
 
         // handle document analysis in the background!
         const result = await analyzeDocument(savePath);
-        const extractedData = await analyzeVehicleDocument(result);
-
+        const extractedData = await analyzeVehicleDocument(result.content);
+        console.log('data ---> ', extractedData);
         const uploadedFile = await prisma.file.create({
           data: {
             originalName: uploaded.name,
@@ -181,6 +181,44 @@ router.get(
       console.error('Download error:', err);
       res.status(500).json({ error: 'Error downloading file' });
       return;
+    }
+  }
+);
+
+router.delete(
+  '/delete/:id',
+  vehicleOwnerAuthMiddleware(),
+  async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+    const userId = req.user?.id || 0;
+    const fileId = Number(req.params.id);
+
+    try {
+      const file = await prisma.file.findFirst({
+        where: { id: fileId, uploadedById: userId },
+      });
+
+      if (!file) {
+        res.status(404).json({ error: 'File not found or access denied' });
+        return;
+      }
+
+      const filePath = path.join(uploadDir, file.uniquePath);
+      try {
+        await fs.promises.unlink(filePath);
+      } catch (fsErr: any) {
+        if (fsErr.code !== 'ENOENT') {
+          console.error('File unlink error:', fsErr);
+          res.status(500).json({ error: 'Could not delete file from disk' });
+          return;
+        }
+      }
+
+      await prisma.file.delete({ where: { id: fileId } });
+
+      res.json({ message: 'File deleted successfully', fileId });
+    } catch (err) {
+      console.error('Delete error:', err);
+      res.status(500).json({ error: 'Error deleting file' });
     }
   }
 );

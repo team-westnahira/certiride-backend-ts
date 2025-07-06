@@ -124,6 +124,6 @@ model File {
   uploadedAt     DateTime  @default(now())
   uploadedById   Int
   vehicleId      Int
-  extractedData  String
+  extractedData  String @db.VarChar(1024)
   category       String
 }
