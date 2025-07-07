@@ -135,6 +135,9 @@ router.post(
         const extractedData = await extractVehicleCertificateDocumentData(result.content);
 
         if (extractedData === null) {
+          await prisma.fileHash.delete({
+            where: { hash: fileHash },
+          });
           res.status(400).json({ message: 'Error extracting vehicle data from the document.' });
           return;
         }
@@ -142,11 +145,17 @@ router.post(
         const vehicleCertificate: VehicleRegistrationData = JSON.parse(extractedData);
 
         if (vehicleCertificate.authenticity_score < 0.8) {
+          await prisma.fileHash.delete({
+            where: { hash: fileHash },
+          });
           res.status(400).json({ message: 'The extracted vehicle data is not authentic.' });
           return;
         }
 
         if (vehicleCertificate.chassis_number !== vin) {
+          await prisma.fileHash.delete({
+            where: { hash: fileHash },
+          });
           res
             .status(400)
             .json({ message: 'The extracted vehicle data does not match the provided VIN.' });
@@ -182,6 +191,12 @@ router.post(
             username: req.user?.nic + appedix,
           });
         } catch (err) {
+          await prisma.fileHash.delete({
+            where: { hash: fileHash },
+          });
+          await prisma.vehicle.delete({
+            where: { vin: vin },
+          });
           res.status(500).json({
             message: 'Error invoking chaincode. Could not create vehicle asset.',
             error: err,
