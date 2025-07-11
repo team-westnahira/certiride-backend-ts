@@ -12,10 +12,11 @@ import fileUpload from "express-fileupload";
 import analyzeDocument from "../../services/ocr.service";
 import { extractDiagnosticReportData } from "../../services/ai.service";
 import { DiagnosticReportBlockChainModel } from "../../models/interaction.model";
-import { getDocumentHash } from '../../services/hash.service';
+import dotenv from 'dotenv';
+dotenv.config();
+const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
 const router = Router();
-
 
 router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req:AuthenticatedMechanicRequest , res:Response) => {
 
@@ -68,7 +69,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
         return
     }
 
-    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic}`)
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
     const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
     const interaction = await getInteraction(interaction_id, vehicleChainData)
 
@@ -152,7 +153,6 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
             }
 
             try{
-
                 await axiosInstance.post('/invoke' , {
                     'fn': 'InsertDiagnosticReport',
                     'args': [
@@ -160,7 +160,7 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                         vehicle.vin,
                         JSON.stringify(report)
                     ],
-                    username: vehicleOwner.nic,
+                    username: vehicleOwner.nic + appendix,
                 })
 
                 res.status(200).json({ 

@@ -9,6 +9,7 @@ import vehicleOwnerAuthMiddleware from "../../middleware/vehicleOwner.middleware
 import { AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest } from "../../types";
 import dotenv from 'dotenv';
 dotenv.config();
+const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
 const router = Router();
 
@@ -54,7 +55,7 @@ router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:Authe
     }
 
     // mileage check to esnure that the mileage is not less than the previous one
-    const vehicleChainData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic}`)
+    const vehicleChainData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
     const vehicleData = vehicleChainData.data.data as VehicleBlockChainModel;
 
     const latestVehicleInteractionData = vehicleData.interaction[vehicleData.interaction.length - 1];
@@ -94,14 +95,13 @@ router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:Authe
         created_at: new Date(),
     };
 
-    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
     await axiosInstance.post('/invoke' , {
         'fn': 'RecordInteraction',
         'args': [
             vehicle.vin,
             JSON.stringify(interactionData)
         ],
-        username: vehicleOwner.nic + appedix,
+        username: vehicleOwner.nic + appendix,
     })
 
     res.status(200).json({
@@ -148,7 +148,7 @@ router.get('/close-interaction' , mechanicAuthMiddleware() , async (req:Authenti
         return
     }
 
-    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic}`)
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
     const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
     const interaction = vehicleChainData.interaction.find(interaction => interaction.interaction_id === interactionId)
 
@@ -167,15 +167,13 @@ router.get('/close-interaction' , mechanicAuthMiddleware() , async (req:Authenti
         return
     }
 
-    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
-
     await axiosInstance.post('/invoke' , {
         'fn': 'CloseInteraction',
         'args': [
             vehicle.vin,
             interaction.interaction_id
         ],
-        username: vehicleOwner.nic + appedix,
+        username: vehicleOwner.nic + appendix,
     })
 
     res.status(200).json({
@@ -221,8 +219,7 @@ router.get('/get-interaction' , vehicleOwnerAuthMiddleware() , async (req:Authen
         return
     }
 
-    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
-    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appedix}`)
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
     const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
     const interaction = vehicleChainData.interaction.find(interaction => interaction.interaction_id === interactionId)
 
