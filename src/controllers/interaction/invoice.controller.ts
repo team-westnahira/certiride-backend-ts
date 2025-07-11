@@ -61,11 +61,11 @@ router.post('/add-invoice' , mechanicAuthMiddleware() , async (req:Authenticated
         data = await commonInteractionChecker(req , interaction_id , vehicle_id)
         filePath = await commonFileUploadChecker(file)
     }catch(err){
+        console.log('passed')
         const errorMessage = err instanceof Error ? err.message : String(err);
         res.status(400).json({ message: errorMessage });
         return
     }
-
     file.mv(filePath, async (err:any) => {
         if (err) {
             res.status(500).json({ message: "Error saving file", error: err });

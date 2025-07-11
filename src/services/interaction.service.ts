@@ -6,6 +6,9 @@ import { AuthenticatedMechanicRequest } from "../types";
 import fileUpload from "express-fileupload";
 import fs from "fs";
 import { getDocumentHash } from "./hash.service";
+import dotenv from 'dotenv';
+dotenv.config();
+const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
 export const isInteractionExists = async (interactionId: string, vehicle: VehicleBlockChainModel) => {
     const interactionExists = vehicle.interaction.some(interaction => interaction.interaction_id === interactionId)
@@ -59,7 +62,7 @@ export const commonInteractionChecker = async (req:AuthenticatedMechanicRequest,
         throw new Error("Vehicle owner not found");
     }
 
-    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic}`)
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
     const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
     const interaction = await getInteraction(interactionId, vehicleChainData)
 
