@@ -13,6 +13,9 @@ import { extractInvoiceData } from "../../services/ai.service";
 import { getDocumentHash } from "../../services/hash.service";
 import fs from "fs";
 import { VehicleOwner } from "@prisma/client";
+import dotenv from 'dotenv';
+dotenv.config();
+const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
 const router = Router();
 
@@ -146,7 +149,7 @@ router.post('/add-invoice' , mechanicAuthMiddleware() , async (req:Authenticated
                     data.interaction.vehicle_id,
                     JSON.stringify(invoiceData)
                 ],
-                username: data.vehicleOwner.nic,
+                username: data.vehicleOwner.nic + appendix,
             })
 
             res.status(200).json({ 
