@@ -7,6 +7,8 @@ import { randomUUID } from "crypto";
 import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
 import vehicleOwnerAuthMiddleware from "../../middleware/vehicleOwner.middleware";
 import { AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest } from "../../types";
+import dotenv from 'dotenv';
+dotenv.config();
 
 const router = Router();
 
@@ -92,13 +94,14 @@ router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:Authe
         created_at: new Date(),
     };
 
+    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
     await axiosInstance.post('/invoke' , {
         'fn': 'RecordInteraction',
         'args': [
             vehicle.vin,
             JSON.stringify(interactionData)
         ],
-        username: vehicleOwner.nic,
+        username: vehicleOwner.nic + appedix,
     })
 
     res.status(200).json({
@@ -164,13 +167,15 @@ router.get('/close-interaction' , mechanicAuthMiddleware() , async (req:Authenti
         return
     }
 
+    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
+
     await axiosInstance.post('/invoke' , {
         'fn': 'CloseInteraction',
         'args': [
             vehicle.vin,
             interaction.interaction_id
         ],
-        username: vehicleOwner.nic,
+        username: vehicleOwner.nic + appedix,
     })
 
     res.status(200).json({
@@ -216,7 +221,8 @@ router.get('/get-interaction' , vehicleOwnerAuthMiddleware() , async (req:Authen
         return
     }
 
-    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic}`)
+    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appedix}`)
     const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
     const interaction = vehicleChainData.interaction.find(interaction => interaction.interaction_id === interactionId)
 
