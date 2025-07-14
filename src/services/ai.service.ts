@@ -18,6 +18,41 @@ export const extractVehicleCertificateDocumentData = async (data: string) => {
   return completion.choices[0].message.content;
 };
 
+
+export const extractVehicleCertificateDetailedData = async (data: string) => {
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'user',
+        content:
+          `
+          You are an expert data extractor. Your task is to analyze a block of text obtained using OCR from a Sri Lankan Vehicle Registration Certificate and extract specific details. The input text may have inconsistent formatting or OCR artifacts, but you must still do your best to extract the correct values.
+          Your goal is to extract the following fields:
+          "vin": Vehicle Identification Number. Usually a combination of letters and numbers (e.g., LA350S-0001197).
+          "manufacture": The manufacturer of the vehicle (e.g., Toyota, Nissan, Suzuki).
+          "model": The model name of the vehicle (e.g., Alto, Vitz, Axio).
+          "year": Year of manufacture or registration (e.g., 2015).
+          "color": The registered color of the vehicle (e.g., White, Red, Silver).
+          "engineCapacity": The engine capacity in cc (e.g., 658cc, 1500cc). Return just the number (e.g., 658).
+          "province": The issuing province (e.g., Western, Central, Southern).
+          "fuelType": Type of fuel used (e.g., Petrol, Diesel, Electric, Hybrid).
+          
+          Instructions:
+          Output only a valid JSON string with those exact fields.
+          If a field is missing or unreadable, return an empty string ("") for that field.
+          Clean up OCR errors (e.g., extra spaces, broken words) as best as possible.
+          Do not include any additional commentary or explanation — only the JSON.
+          ` + data,
+      },
+    ],
+  });
+  return completion.choices[0].message.content;
+}
+
+
+
+
 export const extractDiagnosticReportData = async (data: string) => {
   const completion = await client.chat.completions.create({
     model: 'gpt-4o-mini',

@@ -395,4 +395,54 @@ router.get(
   }
 );
 
+router.post('/edit-vehicle-details', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
+  // let ther user upload vehickle certificate file and then edit the vehicle details
+  if (!req.user) {
+    res.status(401).json({ message: 'Unauthorized. User not authenticated.' });
+    return;
+  }
+
+  if (!req.headers['content-type']?.includes('multipart/form-data')) {
+    res.status(400).json({ message: 'Invalid content type. Use multipart/form-data.' });
+    return;
+  }
+
+  const vehicleEditSchema = z.object({
+    vin: z.string().min(1, 'VIN is required'),
+    manufacture: z.string().min(1, 'Manufacture is required'),
+    model: z.string().min(1, 'Model is required'),
+    year: z.string().min(1, 'Valid Year is required'),
+    color: z.string().min(1, 'Color is required'),
+    engineCapacity: z.string().min(1, 'Engine capacity is required'),
+    province: z.string().min(1, 'Province is required'),
+    fuelType: z.string().min(1, 'Fuel type is required'),
+  });
+
+  const parsedData = vehicleEditSchema.safeParse(req.body);
+
+  if (!parsedData.success) {
+    res.status(400).json({
+      error: 'Validation failed',
+      issues: parsedData.error.errors,
+    });
+    return;
+  }
+
+  const {
+    vin,
+    manufacture,
+    model,
+    year,
+    color,
+    engineCapacity,
+    province,
+    fuelType,
+  } = parsedData.data;
+
+
+});
+
+
+
+
 export default router;
