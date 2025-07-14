@@ -14,6 +14,8 @@ import { getDocumentHash } from "../../services/hash.service";
 import fs from "fs";
 import { VehicleOwner } from "@prisma/client";
 import dotenv from 'dotenv';
+import { AttachmentBlockChainModel } from "../../models/attachment.model";
+import { randomUUID } from "crypto";
 dotenv.config();
 const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
@@ -138,8 +140,16 @@ router.post('/add-invoice' , mechanicAuthMiddleware() , async (req:Authenticated
             total: +invoice.total,
             payment_status: invoice.payment_status,
             remarks: invoice.remarks,
-            attachments: []
+            attachments: [] as AttachmentBlockChainModel[]
         }
+
+        invoiceData.attachments.push({
+            attachment_id: randomUUID(),
+            attachment_name: `Invoice for ${data.interaction.vehicle_id} `,
+            file_name: file.name,
+            file_cid: filePath,
+            uploaded_date: new Date().toISOString(),
+        })
 
         try{
             await axiosInstance.post('/invoke' , {
