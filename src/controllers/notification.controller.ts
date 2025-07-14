@@ -1,8 +1,11 @@
-import { Response } from "express";
+import express, { Response, Router } from "express";
 import prisma from "../config/prisma";
 import { AuthenticatedVehicleOwnerRequest } from "../types";
+import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
 
-export const getNotifications = async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+const router: Router = express.Router();
+
+router.get('/get-all' , vehicleOwnerAuthMiddleware() , async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
   const { userRole , all } = req.query as { userRole: string , all?: string };
 
   try {
@@ -24,9 +27,10 @@ export const getNotifications = async (req: AuthenticatedVehicleOwnerRequest, re
     res.status(500).json({ success: false, message: "Internal server error" });
     return;
   }
-};
 
-export const markAllNotificationsAsRead = async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+});
+
+router.get('/mark-as-read' , vehicleOwnerAuthMiddleware() , async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
   const { userRole } = req.query as { userRole: string };
 
   try {
@@ -48,4 +52,7 @@ export const markAllNotificationsAsRead = async (req: AuthenticatedVehicleOwnerR
     res.status(500).json({ success: false, message: "Internal server error" });
     return;
   }
-};
+});
+
+
+export default router
