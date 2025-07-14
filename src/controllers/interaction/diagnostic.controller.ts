@@ -13,6 +13,8 @@ import analyzeDocument from "../../services/ocr.service";
 import { extractDiagnosticReportData } from "../../services/ai.service";
 import { DiagnosticReportBlockChainModel } from "../../models/interaction.model";
 import dotenv from 'dotenv';
+import { AttachmentBlockChainModel } from "../../models/attachment.model";
+import { randomUUID } from "crypto";
 dotenv.config();
 const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
@@ -149,8 +151,16 @@ router.post('/add-new-diagnostic-report' , mechanicAuthMiddleware() , async (req
                 diagnostic_date: new Date(diagnostic_date).toISOString(),
                 observations: "",
                 system_checks: diagnosticReport.system_checks,
-                attachments: []
+                attachments: [] as AttachmentBlockChainModel[]
             }
+
+            report.attachments.push({
+                attachment_id: randomUUID(),
+                attachment_name: `Diagnostic Report for ${vehicle.vin} `,
+                file_name: file.name,
+                file_cid: filePath,
+                uploaded_date: new Date().toISOString(),
+            })
 
             try{
                 await axiosInstance.post('/invoke' , {
