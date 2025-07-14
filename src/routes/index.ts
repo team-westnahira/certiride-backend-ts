@@ -11,6 +11,8 @@ import diagnosticController from '../controllers/interaction/diagnostic.controll
 import invoiceController from '../controllers/interaction/invoice.controller';
 import resetPasswordController from '../controllers/auth/reset-password.controller';
 import manageDocumentsController from '../controllers/documents.controller';
+import notificationController from '../controllers/notification.controller';
+
 
 const router = express.Router();
 
@@ -29,5 +31,8 @@ router.use('/manage-docs', manageDocumentsController);
 router.use('/interaction', interactionController);
 router.use('/interaction/diagnostic', diagnosticController);
 router.use('/interaction/invoice', invoiceController);
+
+router.use('/notification', notificationController);
+
 
 export default router;
