@@ -19,7 +19,16 @@ export const extractVehicleCertificateDocumentData = async (data: string) => {
 };
 
 
-export const extractVehicleCertificateDetailedData = async (data: string) => {
+export const extractVehicleCertificateDetailedData = async (data: string): Promise<{
+  vin: string;
+  manufacture: string;
+  model: string;
+  year: string;
+  color: string;
+  engineCapacity: string;
+  province: string;
+  fuelType: string;
+}> => {
   const completion = await client.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
@@ -47,7 +56,19 @@ export const extractVehicleCertificateDetailedData = async (data: string) => {
       },
     ],
   });
-  return completion.choices[0].message.content;
+  if (!completion.choices || completion.choices.length === 0) {
+    throw new Error('No completion choices returned from OpenAI API');
+  }
+  return JSON.parse(completion.choices[0].message.content || '') as {
+    vin: string;
+    manufacture: string;
+    model: string;
+    year: string;
+    color: string;
+    engineCapacity: string;
+    province: string;
+    fuelType: string;
+  };
 }
 
 
