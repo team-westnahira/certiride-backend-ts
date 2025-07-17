@@ -6,9 +6,12 @@ import { VehicleOwner } from '@prisma/client';
 import fileUpload from 'express-fileupload';
 import path from 'path';
 import fs from 'fs';
-import { extractVehicleCertificateDocumentData } from '../services/ai.service';
-import analyzeDocument from '../services/ocr.service';
-import { VehicleRegistrationData } from '../types';
+import {
+  extractVehicleCertificateDetailedData,
+  extractVehicleCertificateDocumentData,
+} from '../services/ai.service';
+import analyzeDocument, { analyzeDocumentInMemory } from '../services/ocr.service';
+import { AuthenticatedVehicleOwnerRequest, VehicleRegistrationData } from '../types';
 import axiosInstance from '../config/axios';
 import { VehicleBlockChainModel } from '../models/vehicle.model';
 import { calculateCompositeRating } from '../services/certificate.service';
@@ -395,54 +398,120 @@ router.get(
   }
 );
 
-router.post('/edit-vehicle-details', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedRequest, res: Response) => {
-  // let ther user upload vehickle certificate file and then edit the vehicle details
-  if (!req.user) {
-    res.status(401).json({ message: 'Unauthorized. User not authenticated.' });
-    return;
+router.post(
+  '/edit-vehicle-details',
+  vehicleOwnerAuthMiddleware(),
+  async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: 'Unauthorized. User not authenticated.' });
+        return;
+      }
+
+      if (!req.headers['content-type']?.includes('multipart/form-data')) {
+        res.status(400).json({ message: 'Invalid content type. Use multipart/form-data.' });
+        return;
+      }
+
+      const vehicleEditSchema = z.object({
+        vin: z.string().min(1, 'VIN is required'),
+        manufacture: z.string().min(1, 'Manufacture is required'),
+        model: z.string().min(1, 'Model is required'),
+        year: z.string().min(1, 'Valid Year is required'),
+        color: z.string().min(1, 'Color is required'),
+        engineCapacity: z.string().min(1, 'Engine capacity is required'),
+        province: z.string().min(1, 'Province is required'),
+        fuelType: z.string().min(1, 'Fuel type is required'),
+      });
+
+      const parsedData = vehicleEditSchema.safeParse(req.body);
+
+      if (!parsedData.success) {
+        res.status(400).json({
+          error: 'Validation failed',
+          issues: parsedData.error.errors,
+        });
+        return;
+      }
+
+      const { vin, manufacture, model, year, color, engineCapacity, province, fuelType } = parsedData.data;
+
+      const vehicle = await prisma.vehicle.findUnique({
+        where: { vin, ownerId: req.user.id },
+      });
+
+      if (!vehicle) {
+        res.status(404).json({ message: 'Vehicle not found or does not belong to user.' });
+        return;
+      }
+
+      const file = req.files?.registrationCertificate as fileUpload.UploadedFile;
+
+      if (!file) {
+        res.status(400).json({ message: 'Vehicle Certification File is required' });
+        return;
+      }
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!allowedMimeTypes.includes(file.mimetype || '')) {
+        res
+          .status(400)
+          .json({ message: 'Invalid file type. Only JPEG, PNG, and GIF are allowed.' });
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        res.status(400).json({ message: 'File size exceeds 5MB limit.' });
+        return;
+      }
+
+      const extractedText = await analyzeDocumentInMemory(file.data);
+      console.log('extractedText:', extractedText);
+      const data = await extractVehicleCertificateDetailedData(extractedText.content);
+
+      if (data.vin !== vin) {
+        res.status(400).json({ message: 'The extracted vehicle data does not match the provided VIN.' });
+        return;
+      }
+
+      await prisma.vehicle.update({
+        where: { vin, ownerId: req.user.id },
+        data: {
+          manufacture: data.manufacture === '' ? vehicle.manufacture : data.manufacture,
+          model: data.model === '' ? vehicle.model : data.model,
+          year: +data.year === 0 ? vehicle.year : +data.year,
+        },
+      });
+
+      await axiosInstance.post('/invoke', {
+        fn: 'UpdateVehicleData',
+        args: [
+          vin,
+          JSON.stringify({
+            manufacture: data.manufacture === '' ? vehicle.manufacture : data.manufacture,
+            model: data.model === '' ? vehicle.model : data.model,
+            year: +data.year === 0 ? vehicle.year : +data.year,
+            color: data.color,
+            engineCapacity: data.engineCapacity,
+            province: data.province,
+            fuelType: data.fuelType,
+            initialMilage: vehicle.initialMilage,
+          })
+        ],
+        username: req.user.nic + (process.env.ENV === 'dev' ? '_test' : ''),
+      });
+
+      res.status(200).json({
+        message: 'Vehicle details updated successfully.',
+      });
+      return
+
+    } catch (err) {
+      console.error('Error in edit-vehicle-details:', err);
+      res.status(500).json({ message: 'Internal server error', error: err });
+      return;
+    }
   }
-
-  if (!req.headers['content-type']?.includes('multipart/form-data')) {
-    res.status(400).json({ message: 'Invalid content type. Use multipart/form-data.' });
-    return;
-  }
-
-  const vehicleEditSchema = z.object({
-    vin: z.string().min(1, 'VIN is required'),
-    manufacture: z.string().min(1, 'Manufacture is required'),
-    model: z.string().min(1, 'Model is required'),
-    year: z.string().min(1, 'Valid Year is required'),
-    color: z.string().min(1, 'Color is required'),
-    engineCapacity: z.string().min(1, 'Engine capacity is required'),
-    province: z.string().min(1, 'Province is required'),
-    fuelType: z.string().min(1, 'Fuel type is required'),
-  });
-
-  const parsedData = vehicleEditSchema.safeParse(req.body);
-
-  if (!parsedData.success) {
-    res.status(400).json({
-      error: 'Validation failed',
-      issues: parsedData.error.errors,
-    });
-    return;
-  }
-
-  const {
-    vin,
-    manufacture,
-    model,
-    year,
-    color,
-    engineCapacity,
-    province,
-    fuelType,
-  } = parsedData.data;
-
-
-});
-
-
-
+);
 
 export default router;
