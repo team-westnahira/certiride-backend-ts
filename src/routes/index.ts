@@ -33,6 +33,6 @@ router.use('/interaction/diagnostic', diagnosticController);
 router.use('/interaction/invoice', invoiceController);
 
 router.use('/notification', notificationController);
-
+router.use('/ownership', require('../controllers/ownership.controller').default);
 
 export default router;
