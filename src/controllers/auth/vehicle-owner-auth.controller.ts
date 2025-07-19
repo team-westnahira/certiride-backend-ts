@@ -126,6 +126,7 @@ router.post('/register', async (req: Request, res: Response) => {
       await prisma.vehicleOwner.delete({
         where: { id: newUser.id },
       });
+      console.log(err)
       res.status(500).json({ message: 'Error creating user wallet in blockchain', error: err });
       return;
     }
