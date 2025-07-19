@@ -13,7 +13,7 @@ import { randomUUID } from 'crypto';
 import fileUpload from 'express-fileupload';
 import { commonFileUploadChecker, commonHashChecker } from '../services/interaction.service';
 import { getDocumentHash } from '../services/hash.service';
-import { VehicleBlockChainModel } from '../models/vehicle.model';
+import { OwnershipTransfer, VehicleBlockChainModel } from '../models/vehicle.model';
 dotenv.config();
 
 const router = express.Router();
@@ -149,7 +149,87 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
     });
 
 
-})
+});
+
+
+router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async (req:AuthenticatedVehicleOwnerRequest, res: Response) => {
+    const transferOwnershipResponseSchema = z.object({
+        transferId: z.string().min(1, 'Transfer ID is required'),
+        status: z.enum(['approved', 'rejected']),
+        remarks: z.string().optional(),
+    });
+
+    try {
+        const parsedData = transferOwnershipResponseSchema.safeParse(req.body);
+        
+        if (!parsedData.success) {
+            res.status(400).json({
+                error: "Validation failed",
+                issues: parsedData.error.errors,
+            });
+            return
+        }
+
+        const { transferId, status, remarks } = parsedData.data;
+
+        let blockchainResponse:any;
+
+        try{
+            blockchainResponse = await axiosInstance.post(`/advanceQuery`, {
+                fn: "GetOwnershipInvitesByUser",
+                args: [req.user?.id],
+                username: req.user?.nic + appedix,
+            })
+        }catch (error) {
+            console.error('Error fetching ownership invites:', error);  
+            res.status(400).json({ error: 'Something went wrong' });
+            return
+        }
+
+        const fullData = blockchainResponse.data.data as OwnershipTransfer[];
+        const transferInvite = fullData.find(transfer => transfer.transfer_id === transferId);
+
+        if (fullData.length === 0) {
+            res.status(404).json({ error: 'No transfer ownership invites' });
+            return;
+        }
+
+        if(!transferInvite) {
+            res.status(404).json({ error: 'Ownership transfer invite not found' });
+            return;
+        }
+
+        if (transferInvite.to_owner_id !== req.user?.id+'') {
+            res.status(403).json({ error: 'You are not authorized to respond to this ownership transfer' });
+            return;
+        }
+
+        if (transferInvite.status !== 'pending') {
+            res.status(400).json({ error: 'Ownership transfer is not in pending state' });
+            return;
+        }
+
+        await axiosInstance.post('/invoke', {
+            fn: 'AcceptRejectTransferOwnership',
+            args: [transferInvite.vin , req.user?.id , transferId, status, new Date().toISOString()],
+            username: req.user?.nic + appedix,
+        });
+
+        if (status === 'approved') {
+            await prisma.vehicle.update({
+                where: { vin: transferInvite.vin },
+                data: {
+                    ownerId: req.user?.id,
+                },
+            })
+        }
+        
+        res.status(200).json({ message: 'Ownership transfer response recorded successfully' });
+    } catch (error) {
+        console.error('Error responding to ownership transfer:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 
 export default router;
