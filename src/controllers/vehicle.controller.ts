@@ -194,6 +194,7 @@ router.post(
             username: req.user?.nic + appedix,
           });
         } catch (err) {
+          console.log(err)
           await prisma.fileHash.delete({
             where: { hash: fileHash },
           });

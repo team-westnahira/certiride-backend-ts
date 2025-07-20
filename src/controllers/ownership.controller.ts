@@ -153,10 +153,10 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
 
 
 router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async (req:AuthenticatedVehicleOwnerRequest, res: Response) => {
+    
     const transferOwnershipResponseSchema = z.object({
         transferId: z.string().min(1, 'Transfer ID is required'),
         status: z.enum(['approved', 'rejected']),
-        remarks: z.string().optional(),
     });
 
     try {
@@ -170,7 +170,7 @@ router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async 
             return
         }
 
-        const { transferId, status, remarks } = parsedData.data;
+        const { transferId, status } = parsedData.data;
 
         let blockchainResponse:any;
 
@@ -182,7 +182,7 @@ router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async 
             })
         }catch (error) {
             console.error('Error fetching ownership invites:', error);  
-            res.status(400).json({ error: 'Something went wrong' });
+            res.status(400).json({ error: 'Cannot find the transfer request' });
             return
         }
 
