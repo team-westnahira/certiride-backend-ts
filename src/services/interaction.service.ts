@@ -85,7 +85,7 @@ export const commonInteractionChecker = async (req:AuthenticatedMechanicRequest,
     return {interaction , vehicleChainData , vehicleOwner}
 }
 
-export const commonFileUploadChecker = async (file: fileUpload.UploadedFile) => {
+export const commonFileUploadChecker = async (file: fileUpload.UploadedFile , uploadDir:string) => {
     if (!file) {
         throw new Error("File is required");
     }
@@ -100,7 +100,7 @@ export const commonFileUploadChecker = async (file: fileUpload.UploadedFile) => 
         throw new Error("File size exceeds 5MB limit.");
     }
 
-    const uploadDir = path.join(__dirname, "../../uploads/vehicles/diagnostic-reports");
+    // const uploadDir = path.join(__dirname, "../../uploads/vehicles/diagnostic-reports");
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
     }

@@ -16,6 +16,7 @@ import { VehicleOwner } from "@prisma/client";
 import dotenv from 'dotenv';
 import { AttachmentBlockChainModel } from "../../models/attachment.model";
 import { randomUUID } from "crypto";
+import path from "path";
 dotenv.config();
 const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
@@ -61,7 +62,8 @@ router.post('/add-invoice' , mechanicAuthMiddleware() , async (req:Authenticated
 
     try{
         data = await commonInteractionChecker(req , interaction_id , vehicle_id)
-        filePath = await commonFileUploadChecker(file)
+        const uploadDir = path.join(__dirname, "../../uploads/vehicles/invoices");
+        filePath = await commonFileUploadChecker(file,uploadDir)
     }catch(err){
         console.log('passed')
         const errorMessage = err instanceof Error ? err.message : String(err);
