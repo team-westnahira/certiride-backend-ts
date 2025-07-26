@@ -14,6 +14,7 @@ import fileUpload from 'express-fileupload';
 import { commonFileUploadChecker, commonHashChecker } from '../services/interaction.service';
 import { getDocumentHash } from '../services/hash.service';
 import { OwnershipTransfer, VehicleBlockChainModel } from '../models/vehicle.model';
+import { createNotificationRecord } from '../services/notification.service';
 dotenv.config();
 
 const router = express.Router();
@@ -36,7 +37,7 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
     const file = req.files?.proof as fileUpload.UploadedFile;
 
     try{
-        filePath = await commonFileUploadChecker(file)
+        filePath = await commonFileUploadChecker(file , uploadDir)
     }catch(err){
         const errorMessage = err instanceof Error ? err.message : String(err);
         res.status(400).json({ message: errorMessage });
@@ -83,6 +84,10 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
                 return;
             }
 
+            if(newOwner.id === req.user?.id){
+                res.status(400).json({ error: 'Please select a valid receipiant' });
+                return;
+            }
 
             const result = await analyzeDocument(filePath)
             hash = getDocumentHash(result.content)
@@ -116,7 +121,7 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
             const attachment:AttachmentBlockChainModel[] = [{
                 attachment_id: randomUUID(),
                 attachment_name: 'ownership_transfer_request',
-                file_name: path.join(uploadDir, `${Date.now()}-${file.name}`),
+                file_name: filePath,
                 file_cid: 'cid_placeholder',
                 uploaded_date: new Date().toISOString(),
             }]
@@ -127,6 +132,44 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
                 args: [vehicle.vin, 'insert', req.user?.id , newOwner.id , new Date().toISOString() , JSON.stringify(attachment) , randomUUID()],
                 username: req.user?.nic + appedix,
             });
+
+            await createNotificationRecord(
+                'OwnershipTransfer',
+                req.user?.id || 1,
+                "VehicleOwner",
+                JSON.stringify({
+                    "type": "OwnershipTransfer",
+                    "userId": req.user?.id,
+                    "role": "VehicleOwner",
+                    "title": "Ownership Transfer Initiated",
+                    "message": `You have initiated a vehicle ownership transfer request to ${newOwner.firstName + " " + newOwner.lastName}. The new owner must accept the request to complete the process.`,
+                    "data": {
+                        "vehicleId": vehicle.vin,
+                        "receiverId": newOwner.id,
+                        "receiverName": newOwner.firstName + " " + newOwner.lastName,
+                        "status": "Pending"
+                    }
+                })
+            )
+
+            await createNotificationRecord(
+                'OwnershipTransfer',
+                newOwner.id,
+                "VehicleOwner",
+                JSON.stringify({
+                    "type": "OwnershipTransfer",
+                    "userId": newOwner.id,
+                    "role": "VehicleOwner",
+                    "title": "Ownership Transfer Request Received",
+                    "message": `${req.user?.firstName + " " + req.user?.lastName} has requested to transfer a vehicle to your ownership. Please review and accept the request to complete the transfer.`,
+                    "data": {
+                        "vehicleId": vehicle.vin,
+                        "receiverId": newOwner.id,
+                        "receiverName": newOwner.firstName + " " + newOwner.lastName,
+                        "status": "Pending"
+                    }
+                })
+            )
     
             res.status(200).json({
                 message: 'Ownership transfer initiated successfully',
@@ -156,7 +199,7 @@ router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async 
     
     const transferOwnershipResponseSchema = z.object({
         transferId: z.string().min(1, 'Transfer ID is required'),
-        status: z.enum(['approved', 'rejected']),
+        status: z.enum(['accepted', 'rejected']),
     });
 
     try {
@@ -215,12 +258,22 @@ router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async 
             username: req.user?.nic + appedix,
         });
 
-        if (status === 'approved') {
+        if (status === 'accepted') {
             await prisma.vehicle.update({
                 where: { vin: transferInvite.vin },
                 data: {
                     ownerId: req.user?.id,
                 },
+            })
+
+        }else{
+            transferInvite.attachments.forEach(async (item) => {
+                const normalized = path.normalize(item.file_name);
+                await prisma.fileHash.deleteMany({
+                    where: {
+                        fileName: normalized
+                    }
+                })
             })
         }
         
