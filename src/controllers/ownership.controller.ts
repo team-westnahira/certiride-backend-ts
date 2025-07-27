@@ -194,7 +194,6 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
 
 });
 
-
 router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async (req:AuthenticatedVehicleOwnerRequest, res: Response) => {
     
     const transferOwnershipResponseSchema = z.object({
@@ -283,6 +282,34 @@ router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async 
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
+router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (req:AuthenticatedVehicleOwnerRequest, res: Response) => {
+    try{
+        const blockchainResponse = await axiosInstance.post(`/advanceQuery`, {
+            fn: "GetOwnershipInvitesByUser",
+            args: [req.user?.id],
+            username: req.user?.nic + appedix,
+        })
+
+        const fullData = blockchainResponse.data.data as OwnershipTransfer[];
+        const transferInvite = fullData.find(transfer => transfer.status === 'pending');
+
+        res.status(200).json({
+            message: 'New Ownership transfer invite',
+            invite: transferInvite
+        })
+        return
+
+    }catch (error) {
+        res.status(400).json({ error: 'Cannot find the transfer request' });
+        return
+    }
+
+});
+
+
+
 
 
 export default router;
