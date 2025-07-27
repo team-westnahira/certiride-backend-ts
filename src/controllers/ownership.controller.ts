@@ -283,7 +283,6 @@ router.post('/transfer-ownership-response', vehicleOwnerAuthMiddleware(), async 
     }
 });
 
-
 router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (req:AuthenticatedVehicleOwnerRequest, res: Response) => {
     try{
         const blockchainResponse = await axiosInstance.post(`/advanceQuery`, {
@@ -307,9 +306,6 @@ router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (re
     }
 
 });
-
-
-
 
 
 export default router;
