@@ -107,6 +107,7 @@ export const commonInteractionCheckerForVehicleOwner = async(req:AuthenticatedVe
     }
 
     const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
+    console.log('vehicle : = ' , vehicleData)
     const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
     const interaction = await getInteraction(interactionId, vehicleChainData)
 
@@ -128,16 +129,19 @@ export const commonInteractionCheckerForVehicleOwner = async(req:AuthenticatedVe
 
 export const commonFileUploadChecker = async (file: fileUpload.UploadedFile , uploadDir:string) => {
     if (!file) {
+        console.log('file required')
         throw new Error("File is required");
     }
 
     const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif"];
     if (!allowedMimeTypes.includes(file.mimetype || "")) {
+        console.log('type error')
         throw new Error("Invalid file type. Only JPEG, PNG, and GIF are allowed.");
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
+        console.log('size exceed')
         throw new Error("File size exceeds 5MB limit.");
     }
 
