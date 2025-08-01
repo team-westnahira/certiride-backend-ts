@@ -1,5 +1,6 @@
 import client from '../config/openai';
 import { UserFileExtractedType } from '../types';
+import { interactionFieldMap } from '../utils/dynamicTypes';
 
 export const extractVehicleCertificateDocumentData = async (data: string) => {
   const completion = await client.chat.completions.create({
@@ -182,3 +183,75 @@ ${text}
 
   return completion.choices[0].message.content?.trim();
 };
+
+
+export async function detectInteractionType(invoiceText: string): Promise<string> {
+  const prompt = `
+  You are an intelligent document classifier for vehicle-related interactions.
+
+  Your task is to read the following invoice and determine the most appropriate interaction type from the list below:
+
+  Possible interaction types:
+  - service_record
+  - accident_repair_record
+  - troubleshoot_repair_record
+
+  Respond with only the most relevant type from the list above. Do not provide explanations.
+
+  Invoice content:
+  ${invoiceText}
+  `;
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+
+  return completion.choices[0].message.content?.trim() || 'Unknown';
+}
+
+export async function extractInvoiceFields(interactionType: string, invoiceText: string): Promise<string> {
+  const prompt = `
+    You are a data extraction AI. Your job is to extract specific fields from vehicle-related invoices.
+
+    The following invoice text belongs to the interaction type: "${interactionType}".
+
+    Below are the fields you must extract for this type:
+
+    ${generatePrompt(interactionType)}
+
+    Please extract and return the fields as a valid JSON object.
+    please provide most accurate and relevent details for each field.
+    Use exact field names and ensure all values are either correctly extracted or null if not found.
+    for cost values please remove , characters which will prevent the number parsing in javascript (just give me the number)
+
+    Invoice content:
+    ${invoiceText}
+  `;
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+
+  return completion.choices[0].message.content || '';
+}
+
+
+
+
+function generatePrompt(interactionType: keyof typeof interactionFieldMap): string {
+  const fields = interactionFieldMap[interactionType]
+    .map((field) => `- ${field}`)
+    .join('\n');
+
+  return fields
+}
