@@ -217,14 +217,16 @@ export async function detectInteractionType(invoiceText: string): Promise<string
 export async function extractInvoiceFields(interactionType: string, invoiceText: string): Promise<string> {
   const prompt = `
     You are a data extraction AI. Your job is to extract specific fields from vehicle-related invoices.
-
     The following invoice text belongs to the interaction type: "${interactionType}".
-
     Below are the fields you must extract for this type:
 
     ${generatePrompt(interactionType)}
 
     Please extract and return the fields as a valid JSON object.
+    Please ensure that you are providing data whiich is relevent to the fields mentioned above.
+    If a field is not applicable or not found, set it to null.
+    If a field is a number, ensure it is a valid number without any formatting characters (e.g., commas).
+    If a field is a date, ensure it is in the format YYYY-MM-DD.
     please provide most accurate and relevent details for each field.
     Use exact field names and ensure all values are either correctly extracted or null if not found.
     for cost values please remove , characters which will prevent the number parsing in javascript (just give me the number)

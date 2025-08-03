@@ -243,7 +243,6 @@ router.get('/get-interaction' , vehicleOwnerAuthMiddleware() , async (req:Authen
 
 })
 
-
 router.post('/self-add-interaction', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
     
     const newInteractionSchema = z.object({

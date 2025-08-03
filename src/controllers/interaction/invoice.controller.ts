@@ -6,7 +6,7 @@ import prisma from "../../config/prisma";
 import axiosInstance from "../../config/axios";
 import { commonFileUploadChecker, commonHashChecker, commonInteractionChecker, commonInteractionCheckerForVehicleOwner } from "../../services/interaction.service";
 import { VehicleBlockChainModel } from "../../models/vehicle.model";
-import { ServiceInvoiceBlockChainModel, ServiceRecordBlockChainModel, VehicleInteractionBlockChainModel } from "../../models/interaction.model";
+import { AccidentRepairRecord, ServiceInvoiceBlockChainModel, ServiceRecordBlockChainModel, TroubleshootRepairRecord, VehicleInteractionBlockChainModel } from "../../models/interaction.model";
 import fileUpload from "express-fileupload";
 import analyzeDocument from "../../services/ocr.service";
 import { detectInteractionType, extractInvoiceData, extractInvoiceFields } from "../../services/ai.service";
@@ -18,7 +18,7 @@ import { AttachmentBlockChainModel } from "../../models/attachment.model";
 import { randomUUID } from "crypto";
 import path from "path";
 import vehicleOwnerAuthMiddleware from "../../middleware/vehicleOwner.middleware";
-import { buildReleventInteractionType, interactionFieldMap, isServiceRecordBlockChainModel } from "../../utils/dynamicTypes";
+import { buildReleventInteractionType, interactionFieldMap, isAccidentRepairRecord, isServiceRecordBlockChainModel, isTroubleShootRepairRecord } from "../../utils/dynamicTypes";
 
 dotenv.config();
 const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
@@ -262,9 +262,8 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
       return
     }
 
-
+    console.log('record data -> ' ,  result.content)
     const extractedFieldJson = await extractInvoiceFields(detectedType, result.content);
-    console.log('extracted fields are ---> ' , extractedFieldJson)
 
     if (extractedFieldJson === '') {
       res.status(400).json({ message: "Could not extract invoice data using AI." });
@@ -329,17 +328,25 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
         serviceRecordObject.is_on_time = true 
         serviceRecordObject.record_id = randomUUID()
         serviceRecordObject.cost = Number(serviceRecordObject.cost)
-      }else if
+      }else if (isAccidentRepairRecord(record)){
+        let accidentRecordObject: AccidentRepairRecord = record;
+        accidentRecordObject.cost = Number(accidentRecordObject.cost);
+        accidentRecordObject.accident_date = new Date(record.accident_date).toISOString();
+        accidentRecordObject.record_id = randomUUID();
+      }else if (isTroubleShootRepairRecord(record)) {
+        let troubleshootRecordObject: TroubleshootRepairRecord = record;
+        troubleshootRecordObject.record_id = randomUUID();
+        troubleshootRecordObject.mechanic_id = 'self-add';
+        troubleshootRecordObject.repair_cost = Number(troubleshootRecordObject.repair_cost);
+      }
     }
-    
-    console.log('record is ----> ' , record)
-    await prisma.fileHash.delete({ where: { hash } });
-    res.status(200).json({
-      message : 'extracted data from the invoice',
-      data: record
-    })
-
-    return
+        
+    // await prisma.fileHash.delete({ where: { hash } });
+    // res.status(200).json({
+    //   message : 'extracted data from the invoice',
+    //   data: record,
+    //   rawData: result.content
+    // })
 
     try {
       await axiosInstance.post('/invoke', {
