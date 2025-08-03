@@ -106,3 +106,38 @@ export const isServiceRecordBlockChainModel = (record: any): record is ServiceRe
   );
 }
 
+
+export const isAccidentRepairRecord = (record: any): record is AccidentRepairRecord => {
+  return (
+    record &&
+    typeof record === 'object' &&
+    'record_id' in record &&
+    'vin' in record &&
+    'accident_date' in record &&
+    'description' in record &&
+    'severity_rating' in record &&
+    'repair_details' in record &&
+    'cost' in record &&
+    'attachments' in record
+  );
+};
+
+
+export const isTroubleShootRepairRecord = (record: any): record is TroubleshootRepairRecord => {
+  return (
+    record &&
+    typeof record === 'object' &&
+    'record_id' in record &&
+    'vin' in record &&
+    'troubleshoot_date' in record &&
+    'repair_date' in record &&
+    'diagnostic_details' in record &&
+    'repair_description' in record &&
+    'parts_used' in record &&
+    'repair_cost' in record &&
+    'mechanic_id' in record &&
+    'is_resolved' in record &&
+    'attachments' in record &&
+    'note' in record
+  );
+};
