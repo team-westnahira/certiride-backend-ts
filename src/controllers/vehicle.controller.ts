@@ -9,6 +9,7 @@ import fs from 'fs';
 import {
   extractVehicleCertificateDetailedData,
   extractVehicleCertificateDocumentData,
+  generateVehicleInsightRecommendations,
 } from '../services/ai.service';
 import analyzeDocument, { analyzeDocumentInMemory } from '../services/ocr.service';
 import { AuthenticatedVehicleOwnerRequest, VehicleRegistrationData } from '../types';
@@ -543,60 +544,28 @@ router.get('/vehicle-insights', vehicleOwnerAuthMiddleware(), async (req: Authen
     );
 
     const data = blockchainResponse.data.data as VehicleBlockChainModel;
+    const extractedData:any[] = [];
+    const files = await prisma.file.findMany({
+      where: {
+        vehicleId: vehicle.vehicleId,
+      },
+    });
+
+    files.forEach((file) => {
+      extractedData.push(file.extractedData)
+    })
 
     const serviceScore = calculateCompositeRating(data);
-    const lastService = data.interaction.filter(i => i.type === 'Service').sort((a, b) =>
+    const lastService = data.interaction.filter(i => i.service_record !== null ).sort((a, b) =>
       new Date(b.interaction_date).getTime() - new Date(a.interaction_date).getTime()
     )[0];
 
-    // Simulated logic for insights
-    const insights = {
-      engineUsage: 'Normal',
-      maintenanceStatus: 'Overdue',
-      serviceScore: `${serviceScore}/100`,
-      warrantyStatus: {
-        valid: true,
-        until: 'Dec 2025',
-      },
-      recommendations: [
-        {
-          type: 'Oil Change',
-          priority: 'High',
-          note: 'Last change was 12,000 km ago. Recommended every 8,000 km.',
-          due: 'Due in 2 months',
-        },
-        {
-          type: 'Battery Check',
-          priority: 'Medium',
-          note: 'Battery is 3 years old. Consider inspection.',
-          due: 'Due in 2 weeks',
-        },
-        {
-          type: 'Tire Rotation',
-          priority: 'Upcoming',
-          note: 'Rotate every 10,000 km. Current: 9,500 km.',
-          due: 'Due in 1 month',
-        },
-      ],
-      tips: [
-        {
-          type: 'Fuel Efficiency',
-          note: 'Driving pattern shows city driving. Consider premium fuel.',
-        },
-        {
-          type: 'Insurance Reminder',
-          note: 'Insurance expires in 3 months. Renew early for better rates.',
-        },
-        {
-          type: 'Emission Test',
-          note: 'Schedule your annual emission test.',
-        },
-      ],
-    };
+    const insights = await generateVehicleInsightRecommendations(JSON.stringify(data) + " " + JSON.stringify(extractedData) + " last service record is " + JSON.stringify(lastService));
 
     res.status(200).json({
       message: 'Vehicle insights fetched successfully',
       vin,
+      serviceScore,
       insights,
     });
     return

@@ -73,15 +73,9 @@ export interface AuthenticatedVehicleOwnerRequest extends Request {
 
 
 
-
-
-
 type EngineUsage = "Normal" | "Abnormal" | "Unknown";
-
 type MaintenanceStatus = "Up to date" | "Overdue" | "Needs Attention";
-
 type ServiceScore = number;
-
 type WarrantyStatus = "Valid" | "Expired" | "Unknown";
 
 type Warranty = {
