@@ -1,5 +1,5 @@
 import client from '../config/openai';
-import { UserFileExtractedType } from '../types';
+import { UserFileExtractedType, VehicleHealthReport } from '../types';
 import { interactionFieldMap } from '../utils/dynamicTypes';
 
 export const extractVehicleCertificateDocumentData = async (data: string) => {
@@ -247,6 +247,58 @@ export async function extractInvoiceFields(interactionType: string, invoiceText:
   return completion.choices[0].message.content || '';
 }
 
+
+
+export async function generateVehicleInsightRecommendations(text:string): Promise<VehicleHealthReport>{
+   const prompt = `
+      You are a strict JSON-generating intelligent vehicle maintenance and diagnostics assistant.
+      Do not include any additional text or explanations, only the JSON object. such as "Based on that..."
+      Given the following combined data (from blockchain service records, invoices, mileage logs, and diagnostic reports), your task is to analyze the vehicle's current condition and return a full service insight report in structured JSON.
+      Return the result in this format:
+      {
+        "engine_usage": "Normal" | "Abnormal" | "Unknown",
+        "maintenance_status": "Up to date" | "Overdue" | "Needs Attention",
+        "warranty": {
+          "status": "Valid" | "Expired" | "Unknown",
+          "valid_until": "YYYY-MM-DD" | null
+        },
+        "recommendations": [
+          {
+            "type": "Oil Change" | "Battery Check" | "Tire Rotation" | "Brake Inspection" | "Air Filter Replacement" | ...,
+            "priority": "High" | "Medium" | "Low",
+            "note": "Why this is recommended",
+            "due": "Due in X km / X months / Overdue"
+          }
+        ],
+        "tips": [
+          {
+            "type": "Fuel Efficiency" | "Insurance Reminder" | "Emission Test" | "Driving Pattern",
+            "note": "Helpful advice or reminder"
+          }
+        ]
+      }
+      Instructions:
+      - Review the data chronologically.
+      - Determine if service intervals (e.g., oil change every 8,000 km) are overdue.
+      - Detect patterns in driving habits or vehicle diagnostics.
+      - Consider warranties based on service dates and durations.
+      - Include at least 3 smart tips and 3–5 recommendations.
+      - If data is insufficient for a field, return  null.
+      - 
+      Here is the data to analyze: ${text}
+   ` .trim();
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+  const report: VehicleHealthReport = JSON.parse(completion.choices[0].message.content || '{}');
+  return report;
+}
 
 
 
