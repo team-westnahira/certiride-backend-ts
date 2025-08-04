@@ -515,4 +515,104 @@ router.post(
   }
 );
 
+router.get('/vehicle-insights', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+  try {
+    const { vin } = req.query;
+    if (!vin || typeof vin !== 'string') {
+      res.status(400).json({ message: 'VIN is required.' });
+      return 
+    }
+
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return 
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { vin, ownerId: req.user.id },
+    });
+
+    if (!vehicle) {
+      res.status(404).json({ message: 'Vehicle not found.' });
+      return 
+    }
+
+    const appedix = process.env.ENV === 'dev' ? '_test' : '';
+    const blockchainResponse = await axiosInstance.get(
+      `/query/GetVehicle/${vin}/${req.user.nic + appedix}`
+    );
+
+    const data = blockchainResponse.data.data as VehicleBlockChainModel;
+
+    const serviceScore = calculateCompositeRating(data);
+    const lastService = data.interaction.filter(i => i.type === 'Service').sort((a, b) =>
+      new Date(b.interaction_date).getTime() - new Date(a.interaction_date).getTime()
+    )[0];
+
+    // Simulated logic for insights
+    const insights = {
+      engineUsage: 'Normal',
+      maintenanceStatus: 'Overdue',
+      serviceScore: `${serviceScore}/100`,
+      warrantyStatus: {
+        valid: true,
+        until: 'Dec 2025',
+      },
+      recommendations: [
+        {
+          type: 'Oil Change',
+          priority: 'High',
+          note: 'Last change was 12,000 km ago. Recommended every 8,000 km.',
+          due: 'Due in 2 months',
+        },
+        {
+          type: 'Battery Check',
+          priority: 'Medium',
+          note: 'Battery is 3 years old. Consider inspection.',
+          due: 'Due in 2 weeks',
+        },
+        {
+          type: 'Tire Rotation',
+          priority: 'Upcoming',
+          note: 'Rotate every 10,000 km. Current: 9,500 km.',
+          due: 'Due in 1 month',
+        },
+      ],
+      tips: [
+        {
+          type: 'Fuel Efficiency',
+          note: 'Driving pattern shows city driving. Consider premium fuel.',
+        },
+        {
+          type: 'Insurance Reminder',
+          note: 'Insurance expires in 3 months. Renew early for better rates.',
+        },
+        {
+          type: 'Emission Test',
+          note: 'Schedule your annual emission test.',
+        },
+      ],
+    };
+
+    res.status(200).json({
+      message: 'Vehicle insights fetched successfully',
+      vin,
+      insights,
+    });
+    return
+  } catch (err: any) {
+    console.error('Error fetching insights:', err);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: err.message,
+    });
+    return
+  }
+});
+
+
+
+
+
+
 export default router;
