@@ -339,6 +339,10 @@ router.get(
         )
         .slice(0, 5);
 
+      fullDetails.interaction.map(async (interaction) => (
+        interaction.mechanic_id = (await prisma.mechanic.findUnique({ where: { mechanicId: +interaction.mechanic_id } }))?.name || 'Self-Inserted'
+      ))
+
       res.status(200).json({
         message: 'Recent vehicle interaction data',
         fullDetails,
@@ -561,6 +565,18 @@ router.get('/vehicle-insights', vehicleOwnerAuthMiddleware(), async (req: Authen
     )[0];
 
     const insights = await generateVehicleInsightRecommendations(JSON.stringify(data) + " " + JSON.stringify(extractedData) + " last service record is " + JSON.stringify(lastService));
+    
+    // allow one year warranty period
+    const warrantyPeriod = 365 * 24 * 60 * 60 * 1000;
+    const warrantyEndDate = new Date(req.user.dateRegistered);
+    warrantyEndDate.setTime(warrantyEndDate.getTime() + warrantyPeriod);
+    insights.warranty.valid_until = warrantyEndDate.toISOString();
+
+    if (new Date() > warrantyEndDate) {
+      insights.warranty.status = 'Expired';
+    }else{
+      insights.warranty.status = 'Valid';
+    }
 
     res.status(200).json({
       message: 'Vehicle insights fetched successfully',
