@@ -70,3 +70,54 @@ export interface AuthenticatedAdminRequest extends Request {
 export interface AuthenticatedVehicleOwnerRequest extends Request {
   user?: VehicleOwner;
 }
+
+
+
+type EngineUsage = "Normal" | "Abnormal" | "Unknown";
+type MaintenanceStatus = "Up to date" | "Overdue" | "Needs Attention";
+type ServiceScore = number;
+type WarrantyStatus = "Valid" | "Expired" | "Unknown";
+
+type Warranty = {
+  status: WarrantyStatus;
+  valid_until: string | null;
+};
+
+type RecommendationType =
+  | "Oil Change"
+  | "Battery Check"
+  | "Tire Rotation"
+  | "Brake Inspection"
+  | "Air Filter Replacement"
+  | string;
+
+type RecommendationPriority = "High" | "Medium" | "Low";
+
+type Recommendation = {
+  type: RecommendationType;
+  priority: RecommendationPriority;
+  note: string;
+  due: string;
+};
+
+type TipType =
+  | "Fuel Efficiency"
+  | "Insurance Reminder"
+  | "Emission Test"
+  | "Driving Pattern"
+  | string;
+
+type Tip = {
+  type: TipType;
+  note: string;
+};
+
+export type VehicleHealthReport = {
+  engine_usage: EngineUsage;
+  maintenance_status: MaintenanceStatus;
+  service_score: ServiceScore;
+  warranty: Warranty;
+  recommendations: Recommendation[];
+  tips: Tip[];
+};
+

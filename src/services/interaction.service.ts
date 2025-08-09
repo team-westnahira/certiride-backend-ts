@@ -2,7 +2,7 @@ import path from "path";
 import axiosInstance from "../config/axios";
 import prisma from "../config/prisma";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
-import { AuthenticatedMechanicRequest } from "../types";
+import { AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest } from "../types";
 import fileUpload from "express-fileupload";
 import fs from "fs";
 import { getDocumentHash } from "./hash.service";
@@ -75,7 +75,7 @@ export const commonInteractionChecker = async (req:AuthenticatedMechanicRequest,
     }
 
     if(new Date() < new Date(interaction.interaction_date)) {
-        throw new Error("Diagnostic date cannot be in the future");
+        throw new Error("inteaction date cannot be in the future");
     }
 
     if(interaction.mechanic_id !== req.user.mechanicId+'') {
@@ -85,18 +85,63 @@ export const commonInteractionChecker = async (req:AuthenticatedMechanicRequest,
     return {interaction , vehicleChainData , vehicleOwner}
 }
 
+export const commonInteractionCheckerForVehicleOwner = async(req:AuthenticatedVehicleOwnerRequest, interactionId: string , vehicle_id:string) => {
+    if (!req.user) {
+        throw new Error("Unauthorized. User not authenticated.");
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+        where: { vin: vehicle_id },
+    });
+
+    if (!vehicle) {
+        throw new Error("Vehicle not found");
+    }
+
+    const vehicleOwner = await prisma.vehicleOwner.findUnique({
+        where: { id: vehicle.ownerId },
+    });
+
+    if (!vehicleOwner) {
+        throw new Error("Vehicle owner not found");
+    }
+
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
+    console.log('vehicle : = ' , vehicleData)
+    const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
+    const interaction = await getInteraction(interactionId, vehicleChainData)
+
+    if (!interaction) {
+        throw new Error("Interaction not found");
+    }
+
+    if(interaction.status !== 'open') {
+        throw new Error("Interaction is not open");
+    }
+
+    if(new Date() < new Date(interaction.interaction_date)) {
+        throw new Error("Interaction date cannot be in the future");
+    }
+
+
+    return {interaction , vehicleChainData , vehicleOwner}
+}
+
 export const commonFileUploadChecker = async (file: fileUpload.UploadedFile , uploadDir:string) => {
     if (!file) {
+        console.log('file required')
         throw new Error("File is required");
     }
 
     const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif"];
     if (!allowedMimeTypes.includes(file.mimetype || "")) {
+        console.log('type error')
         throw new Error("Invalid file type. Only JPEG, PNG, and GIF are allowed.");
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
+        console.log('size exceed')
         throw new Error("File size exceeds 5MB limit.");
     }
 

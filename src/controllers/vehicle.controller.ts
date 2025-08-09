@@ -9,6 +9,7 @@ import fs from 'fs';
 import {
   extractVehicleCertificateDetailedData,
   extractVehicleCertificateDocumentData,
+  generateVehicleInsightRecommendations,
 } from '../services/ai.service';
 import analyzeDocument, { analyzeDocumentInMemory } from '../services/ocr.service';
 import { AuthenticatedVehicleOwnerRequest, VehicleRegistrationData } from '../types';
@@ -338,6 +339,21 @@ router.get(
         )
         .slice(0, 5);
 
+      fullDetails.interaction = await Promise.all(
+        fullDetails.interaction.map(async (interaction) => {
+          const mechanic = await prisma.mechanic.findUnique({
+            where: { mechanicId: +interaction.mechanic_id },
+          });
+
+          return {
+            ...interaction,
+            mechanic_id: mechanic?.name || 'Self-Inserted',
+          };
+        })
+      );
+
+      console.log('fullDetails:', fullDetails);
+
       res.status(200).json({
         message: 'Recent vehicle interaction data',
         fullDetails,
@@ -514,5 +530,85 @@ router.post(
     }
   }
 );
+
+router.get('/vehicle-insights', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+  try {
+    const { vin } = req.query;
+    if (!vin || typeof vin !== 'string') {
+      res.status(400).json({ message: 'VIN is required.' });
+      return 
+    }
+
+    if (!req.user) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return 
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { vin, ownerId: req.user.id },
+    });
+
+    if (!vehicle) {
+      res.status(404).json({ message: 'Vehicle not found.' });
+      return 
+    }
+
+    const appedix = process.env.ENV === 'dev' ? '_test' : '';
+    const blockchainResponse = await axiosInstance.get(
+      `/query/GetVehicle/${vin}/${req.user.nic + appedix}`
+    );
+
+    const data = blockchainResponse.data.data as VehicleBlockChainModel;
+    const extractedData:any[] = [];
+    const files = await prisma.file.findMany({
+      where: {
+        vehicleId: vehicle.vehicleId,
+      },
+    });
+
+    files.forEach((file) => {
+      extractedData.push(file.extractedData)
+    })
+
+    const serviceScore = calculateCompositeRating(data);
+    const lastService = data.interaction.filter(i => i.service_record !== null ).sort((a, b) =>
+      new Date(b.interaction_date).getTime() - new Date(a.interaction_date).getTime()
+    )[0];
+
+    const insights = await generateVehicleInsightRecommendations(JSON.stringify(data) + " " + JSON.stringify(extractedData) + " last service record is " + JSON.stringify(lastService));
+    
+    // allow one year warranty period
+    const warrantyPeriod = 365 * 24 * 60 * 60 * 1000;
+    const warrantyEndDate = new Date(req.user.dateRegistered);
+    warrantyEndDate.setTime(warrantyEndDate.getTime() + warrantyPeriod);
+    insights.warranty.valid_until = warrantyEndDate.toISOString();
+
+    if (new Date() > warrantyEndDate) {
+      insights.warranty.status = 'Expired';
+    }else{
+      insights.warranty.status = 'Valid';
+    }
+
+    res.status(200).json({
+      message: 'Vehicle insights fetched successfully',
+      vin,
+      serviceScore,
+      insights,
+    });
+    return
+  } catch (err: any) {
+    console.error('Error fetching insights:', err);
+    res.status(500).json({
+      message: 'Internal server error',
+      error: err.message,
+    });
+    return
+  }
+});
+
+
+
+
+
 
 export default router;

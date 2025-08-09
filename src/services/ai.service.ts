@@ -1,5 +1,6 @@
 import client from '../config/openai';
-import { UserFileExtractedType } from '../types';
+import { UserFileExtractedType, VehicleHealthReport } from '../types';
+import { interactionFieldMap } from '../utils/dynamicTypes';
 
 export const extractVehicleCertificateDocumentData = async (data: string) => {
   const completion = await client.chat.completions.create({
@@ -182,3 +183,129 @@ ${text}
 
   return completion.choices[0].message.content?.trim();
 };
+
+
+export async function detectInteractionType(invoiceText: string): Promise<string> {
+  const prompt = `
+  You are an intelligent document classifier for vehicle-related interactions.
+
+  Your task is to read the following invoice and determine the most appropriate interaction type from the list below:
+
+  Possible interaction types:
+  - service_record
+  - accident_repair_record
+  - troubleshoot_repair_record
+
+  Respond with only the most relevant type from the list above. Do not provide explanations.
+
+  Invoice content:
+  ${invoiceText}
+  `;
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+
+  return completion.choices[0].message.content?.trim() || 'Unknown';
+}
+
+export async function extractInvoiceFields(interactionType: string, invoiceText: string): Promise<string> {
+  const prompt = `
+    You are a data extraction AI. Your job is to extract specific fields from vehicle-related invoices.
+    The following invoice text belongs to the interaction type: "${interactionType}".
+    Below are the fields you must extract for this type:
+
+    ${generatePrompt(interactionType)}
+
+    Please extract and return the fields as a valid JSON object.
+    Please ensure that you are providing data whiich is relevent to the fields mentioned above.
+    If a field is not applicable or not found, set it to null.
+    If a field is a number, ensure it is a valid number without any formatting characters (e.g., commas).
+    If a field is a date, ensure it is in the format YYYY-MM-DD.
+    please provide most accurate and relevent details for each field.
+    Use exact field names and ensure all values are either correctly extracted or null if not found.
+    for cost values please remove , characters which will prevent the number parsing in javascript (just give me the number)
+
+    Invoice content:
+    ${invoiceText}
+  `;
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+
+  return completion.choices[0].message.content || '';
+}
+
+
+
+export async function generateVehicleInsightRecommendations(text:string): Promise<VehicleHealthReport>{
+   const prompt = `
+      You are a strict JSON-generating intelligent vehicle maintenance and diagnostics assistant.
+      Do not include any additional text or explanations, only the JSON object. such as "Based on that..."
+      Given the following combined data (from blockchain service records, invoices, mileage logs, and diagnostic reports), your task is to analyze the vehicle's current condition and return a full service insight report in structured JSON.
+      Return the result in this format:
+      {
+        "engine_usage": "Normal" | "Abnormal" | "Unknown",
+        "maintenance_status": "Up to date" | "Overdue" | "Needs Attention",
+        "warranty": {
+          "status": "Valid" | "Expired" | "Unknown",
+          "valid_until": "YYYY-MM-DD" | null
+        },
+        "recommendations": [
+          {
+            "type": "Oil Change" | "Battery Check" | "Tire Rotation" | "Brake Inspection" | "Air Filter Replacement" | ...,
+            "priority": "High" | "Medium" | "Low",
+            "note": "Why this is recommended",
+            "due": "Due in X km / X months / Overdue"
+          }
+        ],
+        "tips": [
+          {
+            "type": "Fuel Efficiency" | "Insurance Reminder" | "Emission Test" | "Driving Pattern",
+            "note": "Helpful advice or reminder"
+          }
+        ]
+      }
+      Instructions:
+      - Review the data chronologically.
+      - Determine if service intervals (e.g., oil change every 8,000 km) are overdue.
+      - Detect patterns in driving habits or vehicle diagnostics.
+      - Consider warranties based on service dates and durations.
+      - Include at least 3 smart tips and 3–5 recommendations.
+      - If data is insufficient for a field, return  null.
+      - 
+      Here is the data to analyze: ${text}
+   ` .trim();
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+  const report: VehicleHealthReport = JSON.parse(completion.choices[0].message.content || '{}');
+  return report;
+}
+
+
+
+function generatePrompt(interactionType: keyof typeof interactionFieldMap): string {
+  const fields = interactionFieldMap[interactionType]
+    .map((field) => `- ${field}`)
+    .join('\n');
+
+  return fields
+}
