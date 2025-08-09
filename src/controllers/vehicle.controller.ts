@@ -339,9 +339,20 @@ router.get(
         )
         .slice(0, 5);
 
-      fullDetails.interaction.map(async (interaction) => (
-        interaction.mechanic_id = (await prisma.mechanic.findUnique({ where: { mechanicId: +interaction.mechanic_id } }))?.name || 'Self-Inserted'
-      ))
+      fullDetails.interaction = await Promise.all(
+        fullDetails.interaction.map(async (interaction) => {
+          const mechanic = await prisma.mechanic.findUnique({
+            where: { mechanicId: +interaction.mechanic_id },
+          });
+
+          return {
+            ...interaction,
+            mechanic_id: mechanic?.name || 'Self-Inserted',
+          };
+        })
+      );
+
+      console.log('fullDetails:', fullDetails);
 
       res.status(200).json({
         message: 'Recent vehicle interaction data',

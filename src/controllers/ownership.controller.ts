@@ -301,7 +301,8 @@ router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (re
         return
 
     }catch (error) {
-        res.status(400).json({ error: 'Cannot find the transfer request' });
+        console.error('Error fetching ownership invites:', error);
+        res.status(500).json({ error: 'Cannot find the transfer request' });
         return
     }
 
