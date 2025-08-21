@@ -134,7 +134,7 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
             });
 
             await createNotificationRecord(
-                'OwnershipTransfer',
+                'remainders',
                 req.user?.id || 1,
                 "VehicleOwner",
                 JSON.stringify({
@@ -153,7 +153,7 @@ router.post('/transfer-ownership-init', vehicleOwnerAuthMiddleware() ,async (req
             )
 
             await createNotificationRecord(
-                'OwnershipTransfer',
+                'alerts',
                 newOwner.id,
                 "VehicleOwner",
                 JSON.stringify({
