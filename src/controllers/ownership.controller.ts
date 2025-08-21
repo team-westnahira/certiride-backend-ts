@@ -292,9 +292,13 @@ router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (re
         })
 
         const fullData = blockchainResponse.data.data as OwnershipTransfer[];
-        const transferInvite = fullData.find(transfer => transfer.status === 'pending');
+        const pendingInvites = fullData.filter(
+            transfer => transfer.status?.toLowerCase().trim() === "pending"
+        );
 
-        if (transferInvite && transferInvite.from_owner_id !== undefined) {
+        if (pendingInvites.length > 0) {
+            const transferInvite = pendingInvites[0];
+
             const owner = await prisma.vehicleOwner.findUnique({
                 where: { id: +transferInvite.from_owner_id }
             });
@@ -305,22 +309,23 @@ router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (re
 
             const updatedInvite = {
                 ...transferInvite,
-                from_owner_cid: owner?.firstName || '',
-                vin: vehicle ? `${vehicle.manufacture} ${vehicle.model} ${vehicle.year}` : transferInvite.vin
+                from_owner_cid: owner?.firstName || "",
+                vin: vehicle
+                ? `${vehicle.manufacture} ${vehicle.model} ${vehicle.year}`
+                : transferInvite.vin,
             };
 
             res.status(200).json({
-                message: 'New Ownership transfer invite',
-                invite: updatedInvite
+                message: "New Ownership transfer invite",
+                invite: updatedInvite,
             });
             return;
         }
 
-        res.status(500).json({
-            message: 'No new transfer invites',
-            invite: null
-        })
-        return
+        res.status(200).json({
+            message: "No new transfer invites",
+            invite: null,
+        });
 
     }catch (error) {
         console.error('Error fetching ownership invites:', error);
