@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://13.201.54.183:3333',
+  baseURL: `http://${process.env.BLOCKCHAIN_BASE_URL}:3333`,
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
