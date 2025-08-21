@@ -295,24 +295,30 @@ router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (re
         const transferInvite = fullData.find(transfer => transfer.status === 'pending');
 
         if (transferInvite && transferInvite.from_owner_id !== undefined) {
-            transferInvite.from_owner_cid = (await prisma.vehicleOwner.findUnique({
-                where: {
-                    id: +transferInvite.from_owner_id
-                }
-            }))?.firstName  || ''
+            const owner = await prisma.vehicleOwner.findUnique({
+                where: { id: +transferInvite.from_owner_id }
+            });
 
             const vehicle = await prisma.vehicle.findUnique({
-                where: {
-                    vin: transferInvite.vin
-                }
-            })
+                where: { vin: transferInvite.vin }
+            });
 
-            transferInvite.vin = vehicle?.manufacture + " " + vehicle?.model + " " + vehicle?.year
+            const updatedInvite = {
+                ...transferInvite,
+                from_owner_cid: owner?.firstName || '',
+                vin: vehicle ? `${vehicle.manufacture} ${vehicle.model} ${vehicle.year}` : transferInvite.vin
+            };
+
+            res.status(200).json({
+                message: 'New Ownership transfer invite',
+                invite: updatedInvite
+            });
+            return;
         }
 
-        res.status(200).json({
-            message: 'New Ownership transfer invite',
-            invite: transferInvite
+        res.status(500).json({
+            message: 'No new transfer invites',
+            invite: null
         })
         return
 
@@ -323,6 +329,5 @@ router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (re
     }
 
 });
-
 
 export default router;
