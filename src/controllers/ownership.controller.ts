@@ -294,6 +294,22 @@ router.post('/check-ownership-invites' , vehicleOwnerAuthMiddleware(), async (re
         const fullData = blockchainResponse.data.data as OwnershipTransfer[];
         const transferInvite = fullData.find(transfer => transfer.status === 'pending');
 
+        if (transferInvite && transferInvite.from_owner_id !== undefined) {
+            transferInvite.from_owner_cid = (await prisma.vehicleOwner.findUnique({
+                where: {
+                    id: +transferInvite.from_owner_id
+                }
+            }))?.firstName  || ''
+
+            const vehicle = await prisma.vehicle.findUnique({
+                where: {
+                    vin: transferInvite.vin
+                }
+            })
+
+            transferInvite.vin = vehicle?.manufacture + " " + vehicle?.model + " " + vehicle?.year
+        }
+
         res.status(200).json({
             message: 'New Ownership transfer invite',
             invite: transferInvite
