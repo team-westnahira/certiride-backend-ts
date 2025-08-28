@@ -30,7 +30,7 @@ router.get('/stat' , adminAuthMiddleware('Moderator') , async (req:Authenticated
     const recentActivities = logs.map(log => ({
         id: log.eventId,
         action: log.eventType,
-        message: (JSON.parse(log.content) as {message : string}).message,
+        message: log.content ? (JSON.parse(log.content) as {message : string}).message : 'No message',
         timeAgo: moment(log.date).fromNow(),
         user: userMap[log.userId] || { id: log.userId, firstName: 'Unknown' ,lastName: "Unknown",},
     }))
