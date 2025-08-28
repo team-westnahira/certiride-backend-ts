@@ -66,7 +66,7 @@ router.post('/add-admin', async (req: Request, res: Response) => {
                 email,
                 password: hashedPassword,
                 role: role,
-                isActive: false,
+                isActive: true,
                 otp: generateOtp()
             },
         });
@@ -77,7 +77,7 @@ router.post('/add-admin', async (req: Request, res: Response) => {
         }))
 
         res.status(201).json({
-            message: "New admin user registered successfully!",
+            message: "New2ssss admin user registered successfully!",
             user: {
                 name: newUser.name,
                 email: newUser.email,
