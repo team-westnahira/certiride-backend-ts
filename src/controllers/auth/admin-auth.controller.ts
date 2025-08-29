@@ -77,7 +77,7 @@ router.post('/add-admin', async (req: Request, res: Response) => {
         }))
 
         res.status(201).json({
-            message: "New2ssss admin user registered successfully!",
+            message: "New admin user registered successfully!",
             user: {
                 name: newUser.name,
                 email: newUser.email,
@@ -263,5 +263,48 @@ router.post('/block-admin' , adminAuthMiddleware('Admin') , async (req:Authentic
     }
 
 })
+
+
+router.post("/logout", async (req: Request, res: Response) => {
+  try {
+    // Expect token in Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Authorization token missing or invalid" });
+      return;
+    }
+
+    const token = authHeader.split(" ")[1];
+    const secretKey = process.env.JWT_SECRET as string;
+
+    if (!secretKey) throw new Error("JWT_SECRET is not defined in environment variables");
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, secretKey);
+    } catch {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
+
+    // Remove token from DB
+    await prisma.authToken.deleteMany({
+      where: { tokenValue: token },
+    });
+
+    // Add audit log
+    addAuditLog(decoded.id, "ADMIN_LOGOUT", JSON.stringify({
+      "IPAddress": req.ip
+    }));
+
+    res.json({ message: "Logout successful" });
+    return;
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error!" });
+    return;
+  }
+});
 
 export default router
