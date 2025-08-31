@@ -223,14 +223,16 @@ router.post("/activate-mechanic" , adminAuthMiddleware("Moderator") , async (req
       return  
     }
 
-    await prisma.mechanic.update({
+    const newMechanic = await prisma.mechanic.update({
       where: { mechanicId },
       data: { verificationStatus: status === '1' ? true : false },
     });
 
+    console.log('new mechanic : ' , newMechanic)
+
     res.json({
       message: "Mechanic activated successfully",
-      mechanic,
+      mechanic : newMechanic,
     });
     return
 
@@ -272,6 +274,55 @@ router.get("/get-all-mechanics", adminAuthMiddleware("Moderator") , async (req: 
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch mechanics" });
+    return
+  }
+});
+
+
+router.get("/search-mechanics", adminAuthMiddleware("Moderator") , async (req: AuthenticatedAdminRequest, res: Response) => {
+  const q = (req.query.q as string) || "";
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const where = q
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { email: { contains: q } },
+            { phone: { contains: q } },
+            { address: { contains: q } },
+            { nic: { contains: q } },
+            { cid: { contains: q } },
+            { specialization: { contains: q } },
+          ],
+        }
+      : {};
+
+    const [mechanics, total] = await Promise.all([
+      prisma.mechanic.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { dateRegistered: "desc" },
+      }),
+      prisma.mechanic.count({ where }),
+    ]);
+
+    res.json({
+      data: mechanics,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+    return
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to search mechanics" });
     return
   }
 });
