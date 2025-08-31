@@ -18,7 +18,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 
-router.post('/add-admin', async (req: Request, res: Response) => {
+router.post('/add-admin' , adminAuthMiddleware('Admin') , async (req: Request, res: Response) => {
     
     try {
 

@@ -328,6 +328,37 @@ router.get("/search-mechanics", adminAuthMiddleware("Moderator") , async (req: A
 });
 
 
+router.get("/get-all-admins" , adminAuthMiddleware('Moderator'), async (req: AuthenticatedAdminRequest, res: Response) => {
+  try {
+    
+    const [admins, _] = await Promise.all([
+      prisma.admin.findMany({
+        orderBy: { adminId: "asc" },
+        select: {
+          adminId: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+        },
+      }),
+      prisma.admin.count(),
+    ]);
+
+    res.json({
+      data: admins
+    });
+    return
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch admins" });
+    return 
+  }
+});
+
+
+
+
 
 
 export default router;
