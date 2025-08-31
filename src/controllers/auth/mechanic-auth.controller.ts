@@ -86,7 +86,7 @@ router.post('/register', async (req: Request, res: Response) => {
                 phone,
                 dateRegistered: new Date(),
                 specialization,
-                verificationStatus: true,
+                verificationStatus: false,
             },
         });
 

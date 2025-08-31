@@ -199,6 +199,82 @@ router.get("/search-vehicle-owners", adminAuthMiddleware("Moderator") , async (r
 );
 
 
+router.post("/activate-mechanic" , adminAuthMiddleware("Moderator") , async (req: AuthenticatedAdminRequest, res: Response) => {
+  
+  const mechanicId = Number(req.query.id);
+  const status = req.query.status;
+
+  if (isNaN(mechanicId)) {
+    res.status(400).json({ error: "Invalid mechanic ID" });
+    return 
+  }
+
+  try {
+
+    const mechanic = await prisma.mechanic.findUnique({
+      where: {  mechanicId: mechanicId },
+    });
+    
+    if (!mechanic){
+      res.status(400).json({
+        message: "Mechanic Not found",
+        mechanic,
+      })
+      return  
+    }
+
+    await prisma.mechanic.update({
+      where: { mechanicId },
+      data: { verificationStatus: status === '1' ? true : false },
+    });
+
+    res.json({
+      message: "Mechanic activated successfully",
+      mechanic,
+    });
+    return
+
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to activate mechanic" });
+    return 
+  }
+
+});
+
+
+router.get("/get-all-mechanics", adminAuthMiddleware("Moderator") , async (req: AuthenticatedAdminRequest, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    // fetch mechanics with pagination
+    const [mechanics, total] = await Promise.all([
+      prisma.mechanic.findMany({
+        skip,
+        take: limit,
+        orderBy: { dateRegistered: "desc" },
+      }),
+      prisma.mechanic.count(),
+    ]);
+
+    res.json({
+      data: mechanics,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+    return
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch mechanics" });
+    return
+  }
+});
 
 
 
