@@ -55,9 +55,9 @@ router.get('/search', adminAuthMiddleware("Moderator")  ,async (req:Authenticate
             {
               eventId: {equals: isNaN(Number(search)) ? undefined : Number(search),},
             },
-            {
-              content: {contains: search,},
-            },
+            // {
+            //   content: {contains: search,},
+            // },
             {
               eventType: {contains: search,},
             },
