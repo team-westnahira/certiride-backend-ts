@@ -357,6 +357,156 @@ router.get("/get-all-admins" , adminAuthMiddleware('Moderator'), async (req: Aut
 });
 
 
+router.get("/get-all-vehicles" , adminAuthMiddleware('Moderator'), async (req: AuthenticatedAdminRequest, res: Response) => {
+  
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  
+  try {
+    
+    const [vehicles, total] = await Promise.all([
+      prisma.vehicle.findMany({
+        skip,
+        take: limit,
+        orderBy: { vehicleId: "asc" },
+        select: {
+          vin: true,
+          manufacture: true,
+          model: true,
+          year: true,
+          initialMilage: true,
+          ownerId: true
+        },
+      }),
+      prisma.vehicle.count(),
+    ]);
+
+
+    const ownerIds = vehicles.map(v => v.ownerId).filter(Boolean);
+    const owners = await prisma.vehicleOwner.findMany({
+      where: { id: { in: ownerIds } },
+      select: { id: true, firstName: true, lastName: true, email: true , address: true },
+    });
+
+    const ownerMap = Object.fromEntries(owners.map(o => [o.id, o]));
+
+    const vehiclesWithOwner = vehicles.map(vehicle => ({
+      ...vehicle,
+      owner: ownerMap[vehicle.ownerId] || null,
+    }));
+
+    res.json({
+      data: vehiclesWithOwner,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+    return
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch admins" });
+    return 
+  }
+});
+
+
+
+router.get("/search-vehicles", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res: Response) => {
+    const q = (req.query.q as string) || "";
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    try {
+      const vehicleWhere = q
+        ? {
+            OR: [
+              { vin: { contains: q } },
+              { manufacture: { contains: q } },
+              { model: { contains: q } },
+              { year: { equals: isNaN(Number(q)) ? undefined : Number(q) } },
+            ],
+          }
+        : {};
+
+      const owners = q
+        ? await prisma.vehicleOwner.findMany({
+            where: {
+              OR: [
+                { firstName: { contains: q } },
+                { lastName: { contains: q } },
+                { email: { contains: q } },
+                { address: { contains: q } },
+              ],
+            },
+            select: { id: true },
+          })
+        : [];
+
+      const ownerIds = owners.map((o) => o.id);
+
+      const where =
+        q && ownerIds.length > 0
+          ? {
+              OR: [
+                vehicleWhere,
+                { ownerId: { in: ownerIds } },
+              ],
+            }
+          : vehicleWhere;
+
+      const [vehicles, total] = await Promise.all([
+        prisma.vehicle.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { vehicleId: "asc" },
+          select: {
+            vin: true,
+            manufacture: true,
+            model: true,
+            year: true,
+            initialMilage: true,
+            ownerId: true,
+          },
+        }),
+        prisma.vehicle.count({ where }),
+      ]);
+
+      const ownersForVehicles = await prisma.vehicleOwner.findMany({
+        where: { id: { in: vehicles.map((v) => v.ownerId).filter(Boolean) } },
+        select: { id: true, firstName: true, lastName: true, email: true, address: true },
+      });
+
+      const ownerMap = Object.fromEntries(
+        ownersForVehicles.map((o) => [o.id, o])
+      );
+
+      const vehiclesWithOwner = vehicles.map((vehicle) => ({
+        ...vehicle,
+        owner: ownerMap[vehicle.ownerId] || null,
+      }));
+
+      res.json({
+        data: vehiclesWithOwner,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to search vehicles" });
+    }
+  }
+);
+
 
 
 
