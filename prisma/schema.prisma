@@ -88,6 +88,8 @@ model Vehicle {
   model       String
   year        Int
   initialMilage Int
+  vehicleImage String 
+  createdAt   DateTime @default(now())
 }
 
 model Report {
