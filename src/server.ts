@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import routes from "./routes";
 import fileUpload from "express-fileupload";
+import path from "path";
 
 
 dotenv.config({ path: "./.env" });
@@ -15,6 +16,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cors());
+
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.get("/", async (req, res) => {
   res.send("Hello, TypeScript Express API!");

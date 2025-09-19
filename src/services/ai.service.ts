@@ -1,3 +1,4 @@
+import { json } from 'stream/consumers';
 import client from '../config/openai';
 import { UserFileExtractedType, VehicleHealthReport } from '../types';
 import { interactionFieldMap } from '../utils/dynamicTypes';
@@ -52,7 +53,9 @@ export const extractVehicleCertificateDetailedData = async (data: string): Promi
           Output only a valid JSON string with those exact fields.
           If a field is missing or unreadable, return an empty string ("") for that field.
           Clean up OCR errors (e.g., extra spaces, broken words) as best as possible.
-          Do not include any additional commentary or explanation — only the JSON.
+          Do not include any additional commentary or explanation or  — only the JSON.
+          Remove  '\`\`\`json' characters if present. I dont need them. i need a string where i can parse it directly.
+          here is the text to analyze:
           ` + data,
       },
     ],
@@ -60,6 +63,7 @@ export const extractVehicleCertificateDetailedData = async (data: string): Promi
   if (!completion.choices || completion.choices.length === 0) {
     throw new Error('No completion choices returned from OpenAI API');
   }
+  console.log('out data is : ' , completion.choices[0].message.content)
   return JSON.parse(completion.choices[0].message.content || '') as {
     vin: string;
     manufacture: string;

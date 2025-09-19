@@ -6,5 +6,5 @@
 
 */
 -- AlterTable
-ALTER TABLE `file` ADD COLUMN `category` VARCHAR(191) NOT NULL,
+ALTER TABLE `File` ADD COLUMN `category` VARCHAR(191) NOT NULL,
     ADD COLUMN `extractedData` VARCHAR(191) NOT NULL;

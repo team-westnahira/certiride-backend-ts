@@ -174,6 +174,7 @@ router.post(
             model,
             year: +year,
             initialMilage: +initialMilage,
+            vehicleImage: 'https://idsb.tmgrup.com.tr/ly/uploads/images/2021/05/30/118050.jpg',
           },
         });
 
@@ -420,6 +421,7 @@ router.post(
   vehicleOwnerAuthMiddleware(),
   async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
     try {
+      
       if (!req.user) {
         res.status(401).json({ message: 'Unauthorized. User not authenticated.' });
         return;
@@ -463,11 +465,13 @@ router.post(
       }
 
       const file = req.files?.registrationCertificate as fileUpload.UploadedFile;
+      const vehicleImage = req.files?.vehicleImage as fileUpload.UploadedFile;
 
       if (!file) {
         res.status(400).json({ message: 'Vehicle Certification File is required' });
         return;
       }
+
       const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
       if (!allowedMimeTypes.includes(file.mimetype || '')) {
         res
@@ -478,7 +482,12 @@ router.post(
 
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
-        res.status(400).json({ message: 'File size exceeds 5MB limit.' });
+        res.status(400).json({ message: 'Certificate file size exceeds 5MB limit.' });
+        return;
+      }
+
+      if (vehicleImage && vehicleImage.size > maxSize) {
+        res.status(400).json({ message: 'Vehicle image file size exceeds 5MB limit.' });
         return;
       }
 
@@ -489,6 +498,30 @@ router.post(
       if (data.vin !== vin) {
         res.status(400).json({ message: 'The extracted vehicle data does not match the provided VIN.' });
         return;
+      }
+
+      const imageUploadDir = path.join(__dirname, '../../uploads/vehicles/images');
+      if (!fs.existsSync(imageUploadDir)) {
+        fs.mkdirSync(imageUploadDir, { recursive: true });
+      }
+
+      if(vehicleImage){
+        const imageFilePath = path.join(imageUploadDir, `${Date.now()}-${vehicleImage.name}`);
+        
+        vehicleImage.mv(imageFilePath, async (err) => {
+          if (err) {
+            res.status(500).json({ message: 'Error saving vehicle image file', error: err });
+            return;
+          }
+          const imageUrl = `/uploads/vehicles/images/${path.basename(imageFilePath)}`;
+          await prisma.vehicle.update({
+            where: { vin, ownerId: req.user?.id },
+            data: {
+              vehicleImage: imageUrl,
+            },
+          });
+  
+        });
       }
 
       await prisma.vehicle.update({
@@ -521,7 +554,7 @@ router.post(
       res.status(200).json({
         message: 'Vehicle details updated successfully.',
       });
-      return
+      return;
 
     } catch (err) {
       console.error('Error in edit-vehicle-details:', err);
