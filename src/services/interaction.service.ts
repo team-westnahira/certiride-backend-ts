@@ -7,6 +7,7 @@ import fileUpload from "express-fileupload";
 import fs from "fs";
 import { getDocumentHash } from "./hash.service";
 import dotenv from 'dotenv';
+import { VehicleInteractionBlockChainModel } from "../models/interaction.model";
 dotenv.config();
 const appendix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
 
@@ -175,4 +176,38 @@ export const commonHashChecker = async (result:any , filePath: string) => {
         }
     })
     
+}
+
+
+export const isServiceRecordOnTime = (interactionList: VehicleInteractionBlockChainModel[], newServiceDate: string, newServiceMileage: number): boolean => {
+    
+    if (interactionList.length === 0) {
+        return true;
+    }
+
+    const sortedInteractions = [...interactionList].sort((a, b) => new Date(a.interaction_date).getTime() - new Date(b.interaction_date).getTime());
+    const lastInteraction = sortedInteractions[sortedInteractions.length - 1];
+    const lastServiceRecord = [...sortedInteractions].reverse().find(interaction => interaction.service_record != null);
+    const lastServiceDate = lastServiceRecord ? lastServiceRecord.interaction_date : lastInteraction.interaction_date;
+    const lastServiceMileage = lastInteraction.mileage;
+
+    if (new Date(newServiceDate) < new Date(lastServiceDate)) {
+        return false;
+    }
+
+    if (newServiceMileage < lastServiceMileage) {
+        return false;
+    }
+
+    if (newServiceMileage - lastServiceMileage > 10000) {
+        return false;
+    }
+
+    const lastServiceYear = new Date(lastServiceDate).getFullYear();
+    const newServiceYear = new Date(newServiceDate).getFullYear();
+    if (newServiceYear - lastServiceYear > 1) {
+        return false;
+    }
+
+    return true;
 }

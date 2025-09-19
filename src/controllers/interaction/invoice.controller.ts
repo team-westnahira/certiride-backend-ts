@@ -4,7 +4,7 @@ import { AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest, Invoice
 import { object, z } from "zod";
 import prisma from "../../config/prisma";
 import axiosInstance from "../../config/axios";
-import { commonFileUploadChecker, commonHashChecker, commonInteractionChecker, commonInteractionCheckerForVehicleOwner } from "../../services/interaction.service";
+import { commonFileUploadChecker, commonHashChecker, commonInteractionChecker, commonInteractionCheckerForVehicleOwner, isServiceRecordOnTime } from "../../services/interaction.service";
 import { VehicleBlockChainModel } from "../../models/vehicle.model";
 import { AccidentRepairRecord, ServiceInvoiceBlockChainModel, ServiceRecordBlockChainModel, TroubleshootRepairRecord, VehicleInteractionBlockChainModel } from "../../models/interaction.model";
 import fileUpload from "express-fileupload";
@@ -219,6 +219,18 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
     return
   }
 
+  const vehicle = await prisma.vehicle.findUnique({
+    where: {
+      vin: vehicle_id,
+      ownerId: req.user?.id
+    }
+  })
+
+  if (!vehicle) {
+    res.status(400).json({ message: "Vehicle not found!" });
+    return
+  }
+
   let filePath = '';
   let data;
 
@@ -253,16 +265,13 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
       return
     }
 
-    // detect the type
     const detectedType = await detectInteractionType(result.content);
-    console.log('detected type is ---> ' , detectedType);
     
     if (!detectedType || !interactionFieldMap[detectedType]) {
       res.status(400).json({ message: `Unknown or unsupported interaction type: ${detectedType}` });
       return
     }
 
-    console.log('record data -> ' ,  result.content)
     const extractedFieldJson = await extractInvoiceFields(detectedType, result.content);
 
     if (extractedFieldJson === '') {
@@ -312,7 +321,6 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
       ]
     };
 
-    // we need to extract accident repair , troubleshoot repair, service record
     let record = buildReleventInteractionType(detectedType , extractedFieldJson);
 
     if(record === undefined){
@@ -320,12 +328,18 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
       return res.status(400).json({ message: "Certiride was not able to detect the interaction type" });
     }
 
+    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
+    const blockchainResponse = await axiosInstance.get(
+      `/query/GetVehicle/${vehicle.vin}/${req.user?.nic + appedix}`
+    );
+
+    const interactionData = blockchainResponse.data.data as VehicleBlockChainModel;
+
     if (detectedType === 'service_record') {
       if (isServiceRecordBlockChainModel(record)) {
         let serviceRecordObject: ServiceRecordBlockChainModel = record;
         serviceRecordObject.mechanic_id = 'self-add'
-        //TODO: implement proper way to detect is it on time
-        serviceRecordObject.is_on_time = true 
+        serviceRecordObject.is_on_time = isServiceRecordOnTime(interactionData.interaction , invoiceData.invoice_date , serviceRecordObject.mileage)
         serviceRecordObject.record_id = randomUUID()
         serviceRecordObject.cost = Number(serviceRecordObject.cost)
       }else if (isAccidentRepairRecord(record)){
