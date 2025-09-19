@@ -2,7 +2,7 @@ import express, { Request, Response, Router } from 'express';
 import prisma from '../config/prisma';
 import vehicleOwnerAuthMiddleware from '../middleware/vehicleOwner.middleware';
 import { z } from 'zod';
-import { VehicleOwner } from '@prisma/client';
+import { Vehicle, VehicleOwner } from '@prisma/client';
 import fileUpload from 'express-fileupload';
 import path from 'path';
 import fs from 'fs';
@@ -244,10 +244,29 @@ router.get(
         },
       });
 
+      const outData:{vehicle:Vehicle , moreData: {totalServices : number , lastMilageOnService: number}}[] = []
+
+      for (const vehicle of vehicles) {
+        const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
+        const blockchainResponse = await axiosInstance.get(
+          `/query/GetVehicle/${vehicle.vin}/${req.user.nic + appedix}`
+        );
+
+        outData.push({
+          vehicle,
+          moreData: {
+            totalServices: (blockchainResponse.data.data as VehicleBlockChainModel).interaction.filter(i => i.service_record !== null ).length,
+            lastMilageOnService: (blockchainResponse.data.data as VehicleBlockChainModel).interaction.length > 0 ? (blockchainResponse.data.data as VehicleBlockChainModel).interaction[blockchainResponse.data.data.interaction.length - 1].mileage : 0
+          }
+        })
+      }
+
       res.status(200).json({
-        vehicles,
+        vehicles: outData,
       });
+
     } catch (err) {
+      console.log(err)
       res.status(500).json({
         message: 'Internal server error. Could not fetch user vehicles.',
       });

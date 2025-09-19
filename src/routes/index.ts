@@ -36,5 +36,4 @@ router.use('/notification', notificationController);
 router.use('/ownership', require('../controllers/ownership.controller').default);
 router.use('/admin', require('../controllers/admin.controller').default);
 
-
 export default router;
