@@ -231,6 +231,7 @@ export async function extractInvoiceFields(interactionType: string, invoiceText:
     If a field is not applicable or not found, set it to null.
     If a field is a number, ensure it is a valid number without any formatting characters (e.g., commas).
     If a field is a date, ensure it is in the format YYYY-MM-DD.
+    If a field is a description, provide a description string about what has purchased, replaced, repaired or upgraded in string format
     please provide most accurate and relevent details for each field.
     Use exact field names and ensure all values are either correctly extracted or null if not found.
     for cost values please remove , characters which will prevent the number parsing in javascript (just give me the number)

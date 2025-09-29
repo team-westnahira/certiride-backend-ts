@@ -292,10 +292,10 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
       return res.status(400).json({ message: "Invoice total does not match." });
     }
 
-    if (invoice.invoice_date !== invoice_date) {
-      await prisma.fileHash.delete({ where: { hash } });
-      return res.status(400).json({ message: "Invoice date does not match." });
-    }
+    // if (invoice.invoice_date !== invoice_date) {
+    //   await prisma.fileHash.delete({ where: { hash } });
+    //   return res.status(400).json({ message: "Invoice date does not match." });
+    // }
 
     const invoiceData: ServiceInvoiceBlockChainModel = {
       invoice_id: interaction_id,
@@ -325,7 +325,8 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
 
     if(record === undefined){
       await prisma.fileHash.delete({ where: { hash } });
-      return res.status(400).json({ message: "Certiride was not able to detect the interaction type" });
+      res.status(400).json({ message: "Certiride was not able to detect the interaction type" });
+      return
     }
 
     const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
@@ -335,32 +336,91 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
 
     const interactionData = blockchainResponse.data.data as VehicleBlockChainModel;
 
+    let serviceRecordObject: ServiceRecordBlockChainModel
+    let accidentRecordObject: AccidentRepairRecord
+    let troubleshootRecordObject: TroubleshootRepairRecord
+
     if (detectedType === 'service_record') {
       if (isServiceRecordBlockChainModel(record)) {
-        let serviceRecordObject: ServiceRecordBlockChainModel = record;
+        serviceRecordObject = record;
         serviceRecordObject.mechanic_id = 'self-add'
         serviceRecordObject.is_on_time = isServiceRecordOnTime(interactionData.interaction , invoiceData.invoice_date , serviceRecordObject.mileage)
         serviceRecordObject.record_id = randomUUID()
         serviceRecordObject.cost = Number(serviceRecordObject.cost)
+        serviceRecordObject.service_date = new Date(invoiceData.invoice_date).toISOString()
+        // serviceRecordObject.description = "";
+        serviceRecordObject.attachments = [
+          {
+            attachment_id: randomUUID(),
+            attachment_name: `Invoice for ${data.interaction.vehicle_id}`,
+            file_name: file.name,
+            file_cid: filePath,
+            uploaded_date: new Date().toISOString(),
+          }
+        ];
+
+        await axiosInstance.post('/invoke', {
+          fn: 'InsertServiceRecord',
+          args: [
+            data.interaction.interaction_id,
+            data.interaction.vehicle_id,
+            JSON.stringify(serviceRecordObject),
+          ],
+          username: data.vehicleOwner.nic + appendix,
+        });
+
       }else if (isAccidentRepairRecord(record)){
-        let accidentRecordObject: AccidentRepairRecord = record;
+        accidentRecordObject = record;
         accidentRecordObject.cost = Number(accidentRecordObject.cost);
         accidentRecordObject.accident_date = new Date(record.accident_date).toISOString();
         accidentRecordObject.record_id = randomUUID();
+        accidentRecordObject.attachments = [
+          {
+            attachment_id: randomUUID(),
+            attachment_name: `Invoice for ${data.interaction.vehicle_id}`,
+            file_name: file.name,
+            file_cid: filePath,
+            uploaded_date: new Date().toISOString(),
+          }
+        ]
+        
+        await axiosInstance.post('/invoke', {
+          fn: 'InsertAccidentRepairReport',
+          args: [
+            data.interaction.interaction_id,
+            data.interaction.vehicle_id,
+            JSON.stringify(accidentRecordObject),
+          ],
+          username: data.vehicleOwner.nic + appendix,
+        });
       }else if (isTroubleShootRepairRecord(record)) {
-        let troubleshootRecordObject: TroubleshootRepairRecord = record;
+        troubleshootRecordObject = record;
         troubleshootRecordObject.record_id = randomUUID();
         troubleshootRecordObject.mechanic_id = 'self-add';
         troubleshootRecordObject.repair_cost = Number(troubleshootRecordObject.repair_cost);
+        troubleshootRecordObject.attachments = [
+          {
+            attachment_id: randomUUID(),
+            attachment_name: `Invoice for ${data.interaction.vehicle_id}`,
+            file_name: file.name,
+            file_cid: filePath,
+            uploaded_date: new Date().toISOString(),
+          }
+        ]
+
+        await axiosInstance.post('/invoke', {
+          fn: 'InsertTroubleshootRepairReport',
+          args: [
+            data.interaction.interaction_id,
+            data.interaction.vehicle_id,
+            JSON.stringify(troubleshootRecordObject),
+          ],
+          username: data.vehicleOwner.nic + appendix,
+        });
       }
     }
-        
-    // await prisma.fileHash.delete({ where: { hash } });
-    // res.status(200).json({
-    //   message : 'extracted data from the invoice',
-    //   data: record,
-    //   rawData: result.content
-    // })
+    
+    await prisma.fileHash.delete({ where: { hash } });
 
     try {
       await axiosInstance.post('/invoke', {
@@ -369,6 +429,15 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
           data.interaction.interaction_id,
           data.interaction.vehicle_id,
           JSON.stringify(invoiceData),
+        ],
+        username: data.vehicleOwner.nic + appendix,
+      });
+
+      await axiosInstance.post('/invoke', {
+        fn: 'CloseInteraction',
+        args: [
+          data.interaction.vehicle_id,
+          data.interaction.interaction_id,
         ],
         username: data.vehicleOwner.nic + appendix,
       });
