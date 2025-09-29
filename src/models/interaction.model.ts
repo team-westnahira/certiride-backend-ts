@@ -22,7 +22,7 @@ export type VehicleInteractionBlockChainModel = {
 export type ServiceRecordBlockChainModel = {
 	record_id: string;
 	vin: string;
-	service_date: Date;
+	service_date: Date | string;
 	mechanic_id: string;
     is_on_time: boolean;
 	mileage: number;

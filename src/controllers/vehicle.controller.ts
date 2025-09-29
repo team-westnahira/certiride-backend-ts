@@ -244,7 +244,7 @@ router.get(
         },
       });
 
-      const outData:{vehicle:Vehicle , moreData: {totalServices : number , lastMilageOnService: number}}[] = []
+      const outData:{vehicle:Vehicle , moreData: {totalServices : number , lastMilageOnService: number , lastServiceDate:Date | null}}[] = []
 
       for (const vehicle of vehicles) {
         const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
@@ -256,7 +256,8 @@ router.get(
           vehicle,
           moreData: {
             totalServices: (blockchainResponse.data.data as VehicleBlockChainModel).interaction.filter(i => i.service_record !== null ).length,
-            lastMilageOnService: (blockchainResponse.data.data as VehicleBlockChainModel).interaction.length > 0 ? (blockchainResponse.data.data as VehicleBlockChainModel).interaction[blockchainResponse.data.data.interaction.length - 1].mileage : 0
+            lastMilageOnService: (blockchainResponse.data.data as VehicleBlockChainModel).interaction.length > 0 ? (blockchainResponse.data.data as VehicleBlockChainModel).interaction[blockchainResponse.data.data.interaction.length - 1].mileage : 0,
+            lastServiceDate: (blockchainResponse.data.data as VehicleBlockChainModel).interaction.length > 0 ? (blockchainResponse.data.data as VehicleBlockChainModel).interaction[blockchainResponse.data.data.interaction.length - 1].created_at : null
           }
         })
       }
