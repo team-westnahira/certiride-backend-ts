@@ -200,6 +200,7 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
     total_cost: z.string().min(1, "Total cost is required").refine((val) => !isNaN(Number(val)), {
       message: "Total cost must be a number",
     }),
+    mileage: z.number()
   });
 
   const parsedData = newInvoiceSchema.safeParse(req.body);
@@ -211,7 +212,7 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
     return
   }
 
-  const { interaction_id, invoice_date, total_cost, vehicle_id } = parsedData.data;
+  const { interaction_id, invoice_date, total_cost, vehicle_id , mileage } = parsedData.data;
   const file = req.files?.invoiceFile as fileUpload.UploadedFile;
 
   if (!file) {
@@ -290,6 +291,11 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
     if (invoice.total !==  +total_cost) {
       await prisma.fileHash.delete({ where: { hash } });
       return res.status(400).json({ message: "Invoice total does not match." });
+    }
+
+    if(invoice.current_mileage !== mileage){
+      await prisma.fileHash.delete({ where: { hash } });
+      return res.status(400).json({ message: "Invoice mileage does not match." });
     }
 
     // if (invoice.invoice_date !== invoice_date) {
