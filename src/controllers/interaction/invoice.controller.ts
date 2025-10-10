@@ -200,7 +200,9 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
     total_cost: z.string().min(1, "Total cost is required").refine((val) => !isNaN(Number(val)), {
       message: "Total cost must be a number",
     }),
-    mileage: z.number()
+    mileage: z.string().min(1, "Mileage is required").refine((val) => !isNaN(Number(val)), {
+      message: "Mileage must be a number",
+    }),
   });
 
   const parsedData = newInvoiceSchema.safeParse(req.body);

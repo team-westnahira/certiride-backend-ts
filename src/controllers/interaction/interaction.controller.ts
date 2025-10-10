@@ -342,4 +342,76 @@ router.post('/self-add-interaction', vehicleOwnerAuthMiddleware(), async (req: A
 });
 
 
+router.get('/self-close-interaction', vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVehicleOwnerRequest, res: Response) => {
+    
+    const vehicleId = req.query.vehicle_id as string
+    const interactionId = req.query.interaction_id as string
+
+    if (!vehicleId || !interactionId) {
+        res.status(400).json({ message: "Vehicle ID and Interaction ID are required" });
+        return
+    }
+
+    if(!req.user){
+        res.status(401).json({ message: "Unauthorized. User not authenticated." });
+        return 
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+        where: { vin: vehicleId },
+    });
+
+    if (!vehicle) {
+        res.status(404).json({ message: "Vehicle not found" });
+        return
+    }
+
+    const vehicleOwner = await prisma.vehicleOwner.findUnique({
+        where: { id: vehicle.ownerId },
+    });
+
+    if (!vehicleOwner) {
+        res.status(404).json({ message: "Vehicle owner not found" });
+        return
+    }
+
+    const vehicleData = await axiosInstance.get(`/query/GetVehicle/${vehicle.vin}/${vehicleOwner.nic + appendix}`)
+    const vehicleChainData = vehicleData.data.data as VehicleBlockChainModel;
+    const interaction = vehicleChainData.interaction.find(interaction => interaction.interaction_id === interactionId)
+
+    if (!interaction) {
+        res.status(404).json({ message: "Interaction not found" });
+        return
+    }
+
+    if (interaction.status !== "open") {
+        res.status(400).json({ message: "Interaction is already closed" });
+        return
+    }
+
+    if(interaction.mechanic_id !== 'owner-self-add'){
+        res.status(401).json({ message: "You dont have permission to close this interaction" });
+        return
+    }
+
+
+    await axiosInstance.post('/invoke' , {
+        'fn': 'CloseInteraction',
+        'args': [
+            vehicle.vin,
+            interaction.interaction_id
+        ],
+        username: vehicleOwner.nic + appendix,
+    })
+
+    res.status(200).json({
+        message: "Interaction closed successfully",
+        interactionId: interactionId,
+        userId: vehicleOwner.id,
+        vehicleId: vehicle.vin,
+    });
+    return
+    
+});
+
 export default router 
