@@ -31,6 +31,7 @@ router.use('/manage-docs', manageDocumentsController);
 router.use('/interaction', interactionController);
 router.use('/interaction/diagnostic', diagnosticController);
 router.use('/interaction/invoice', invoiceController);
+router.use('/certificates', require('../controllers/certificate.controller').default);
 
 router.use('/notification', notificationController);
 router.use('/ownership', require('../controllers/ownership.controller').default);
