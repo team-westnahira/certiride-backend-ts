@@ -295,7 +295,7 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
       return res.status(400).json({ message: "Invoice total does not match." });
     }
 
-    if(invoice.current_mileage !== mileage){
+    if(invoice.current_mileage !== Number(mileage)){
       await prisma.fileHash.delete({ where: { hash } });
       return res.status(400).json({ message: "Invoice mileage does not match." });
     }
