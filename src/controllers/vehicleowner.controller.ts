@@ -119,10 +119,15 @@ router.post("/share-history/validate", async (req: AuthenticatedMechanicRequest,
       return;
     }
 
+    const owner = await prisma.vehicleOwner.findUnique({
+      where: { id: vehicle.ownerId! },
+      select: { nic: true },
+    });
+
 
     const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
     const data = await axiosInstance.get(
-      `/query/GetVehicle/${vehicle.vin}/${req.user?.nic + appedix}`
+      `/query/GetVehicle/${vehicle.vin}/${owner?.nic + appedix}`
     );
 
     res.status(200).json({
