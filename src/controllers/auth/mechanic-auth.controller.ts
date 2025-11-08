@@ -161,7 +161,7 @@ router.post('/login', async (req: Request, res: Response) => {
         const mechanicLoginSchema = z.object({
             email: z.string().email("Invalid email address"),
             password: z.string().min(6, "Password must be at least 6 characters long"),
-            deviceInfo: z.string().max(100 , "Invalid device info")
+            deviceInfo: z.string().max(200 , "Invalid device info")
         });
 
         const parsedData = mechanicLoginSchema.safeParse(req.body);
