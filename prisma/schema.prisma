@@ -54,6 +54,7 @@ model Mechanic {
   nic                String   @unique
   cid                String   @unique
   phone              String   @unique
+  nicImagePath       String?
   dateRegistered     DateTime
   specialization     String
   verificationStatus Boolean
