@@ -6,6 +6,10 @@ import { z } from "zod";
 import prisma from "../../config/prisma";
 import {Mechanic } from "@prisma/client";
 import mechanicAuthMiddleware from "../../middleware/mechanic.middleware";
+import fileUpload from "express-fileupload";
+import fs from "fs";
+import path from "path";
+import { randomUUID } from "crypto";
 
 interface AuthenticatedRequest extends Request {
     user?: Mechanic
@@ -17,6 +21,11 @@ const sriLankanNICRegex = /^(?:\d{9}[VX]|\d{12})$/;
 
 
 router.post('/register', async (req: Request, res: Response) => {
+
+    if (!req.headers['content-type']?.includes('multipart/form-data')) {
+        res.status(400).json({ message: 'Invalid content type. Use multipart/form-data.' });
+        return;
+    }
     
     try {
         
@@ -42,6 +51,38 @@ router.post('/register', async (req: Request, res: Response) => {
                 issues: parsedData.error.format(),
             });
             return
+        }
+
+        const file = req.files?.nicImage;
+            if (!file || Array.isArray(file)) {
+            res.status(400).json({ message: 'NIC front image is required.' });
+            return;
+        }
+
+        // save uploaded NIC image to uploads/nics
+        let imagePath = '';
+        try {
+          const uploadsDir = path.join(__dirname, "../../uploads/nics");
+          await fs.promises.mkdir(uploadsDir, { recursive: true });
+
+          const uploadedFile = file as any; // express-fileupload UploadedFile
+          const originalName = uploadedFile.name || `nic_${Date.now()}.jpg`;
+          const safeName = `${Date.now()}_${originalName.replace(/\s+/g, "_")}`;
+          const destPath = path.join(uploadsDir, safeName);
+
+          if (typeof uploadedFile.mv === "function") {
+            await new Promise<void>((resolve, reject) => {
+              uploadedFile.mv(destPath, (err: any) => (err ? reject(err) : resolve()));
+            });
+          } else {
+            await fs.promises.writeFile(destPath, uploadedFile.data);
+          }
+
+          imagePath = `../../uploads/nics/${safeName}`;
+        } catch (err) {
+          console.error("Failed to save NIC image:", err);
+          res.status(500).json({ error: "Failed to save NIC image" });
+          return;
         }
 
         const { name, email, password, address, nic, cid, phone, specialization  } = parsedData.data;
@@ -82,11 +123,12 @@ router.post('/register', async (req: Request, res: Response) => {
                 password: hashedPassword,
                 address,
                 nic,
-                cid,
+                cid : randomUUID(),
                 phone,
                 dateRegistered: new Date(),
                 specialization,
                 verificationStatus: false,
+                nicImagePath: imagePath
             },
         });
 
@@ -99,6 +141,7 @@ router.post('/register', async (req: Request, res: Response) => {
                 phone: newUser.phone,
                 nic: newUser.nic,
                 email: newUser.email,
+                nicImagePath: imagePath
             },
         });
         return;
