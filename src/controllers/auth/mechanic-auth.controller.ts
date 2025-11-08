@@ -191,6 +191,12 @@ router.post('/login', async (req: Request, res: Response) => {
             return
         }
 
+        // Check verification Status
+        if (!user.verificationStatus) {
+            res.status(403).json({ error: "Account not approved yet" });
+            return;
+        }
+
         // Generate JWT token
         const secretKey = process.env.JWT_SECRET as string;
 
