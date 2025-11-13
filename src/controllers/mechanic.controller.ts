@@ -7,10 +7,6 @@ const router = express.Router();
 
 router.get("/disputes", mechanicAuthMiddleware(), async (req: AuthenticatedMechanicRequest, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
     const mechanicId = req.user?.mechanicId;
 
     if (!mechanicId) {
@@ -18,14 +14,8 @@ router.get("/disputes", mechanicAuthMiddleware(), async (req: AuthenticatedMecha
       return;
     }
 
-    const whereBase: any = { mechanicId };
-
-    if (status) whereBase.status = status;
-
     const [disputes, total] = await Promise.all([
       prisma.dispute.findMany({
-        skip,
-        take: limit,
         orderBy: { createdAt: "desc" },
         where: {
           mechanicId: mechanicId,
@@ -76,12 +66,6 @@ router.get("/disputes", mechanicAuthMiddleware(), async (req: AuthenticatedMecha
     res.status(200).json({
       success: true,
       data: results,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
     });
     return;
   } catch (error) {
