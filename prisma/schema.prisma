@@ -109,6 +109,8 @@ model Dispute {
   status      Boolean
   reviewedBy  Int
   discription String
+  createdAt   DateTime @default(now())
+  vehicleId  Int
 }
 
 model FileHash {

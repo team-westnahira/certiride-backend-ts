@@ -228,7 +228,12 @@ router.post('/login', async (req: Request, res: Response) => {
                 id: user.mechanicId,
                 name: user.name,
                 email: user.email,
-            },
+                address: user.address,
+                nic: user.nic,
+                phone: user.phone,
+                specialization: user.specialization,
+                verificationStatus: user.verificationStatus,
+            }
         });
 
         return
