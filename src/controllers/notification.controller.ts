@@ -1,7 +1,8 @@
 import express, { Response, Router } from "express";
 import prisma from "../config/prisma";
-import { AuthenticatedVehicleOwnerRequest } from "../types";
+import { AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest } from "../types";
 import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
+import mechanicAuthMiddleware from "../middleware/mechanic.middleware";
 
 const router: Router = express.Router();
 
@@ -53,6 +54,36 @@ router.get('/mark-as-read' , vehicleOwnerAuthMiddleware() , async (req: Authenti
     return;
   }
 });
+
+
+
+router.get('/get-all-mechanic' , mechanicAuthMiddleware() , async (req: AuthenticatedMechanicRequest, res: Response) => {
+  const { userRole , all } = req.query as { userRole: string , all?: string };
+
+  try {
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId: req.user?.mechanicId,
+        userRole : 'Mechanic',
+        read: all !== 'true' ? false : undefined,
+      },
+      orderBy: {
+        date: "desc",
+      },
+    });
+
+    res.json({ success: true, data: notifications });
+    return
+  } catch (error) {
+    console.error("Error fetching notifications", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+    return;
+  }
+
+});
+
+
+
 
 
 export default router
