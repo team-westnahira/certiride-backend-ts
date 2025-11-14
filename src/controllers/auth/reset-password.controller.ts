@@ -162,4 +162,159 @@ router.post('/vehicle-owner/reset-password' , async (req:Request , res:Response)
 })
 
 
+
+router.post('/mechanic/gen-token' , async (req:Request , res:Response) => {
+    
+    try {
+
+        const schema = z.object({
+            email: z.string().email("Invalid email address")
+        });
+
+        const parsedData = schema.safeParse(req.body);
+
+        if (!parsedData.success) {
+            res.status(400).json({
+                error: "Validation failed",
+                issues: parsedData.error.format(),
+            });
+            return
+        }
+
+        const {email} = parsedData.data;
+
+        let mechanic = await prisma.mechanic.findUnique({
+            where: { email },
+        });
+
+        if (!mechanic) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        const otp = generateSecureOtp(8);
+
+        await prisma.authToken.create({
+            data: {
+                tokenType: "reset-password",
+                userId: mechanic.mechanicId,
+                userRole: "Mechanic",
+                ipAddress: req.ip || '',
+                deviceInfo: "",
+                expirationTime: new Date(Date.now() + 1 * 60 * 60 * 1000),
+                tokenValue: otp
+            },
+        });
+
+        await sendEmail({
+            to: mechanic.email,
+            subject: 'Certiride Reset Password OTP',
+            html:resetPasswordTemplate(otp)
+        });
+
+        res.json({
+            message: "Reset password OTP sent",
+        });
+
+        return
+
+    }catch(err){
+        console.error(err);
+        res.status(500).json({ error: "Internal server error!" });
+        return;
+    }
+
+})
+
+router.post('/mechanic/reset-password' , async (req:Request , res:Response) => {
+    
+    try {
+
+        const schema = z.object({
+            email: z.string().email("Invalid email address"),
+            token: z.string().min(1, "Reset password token is required"),
+            newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+        });
+
+        const parsedData = schema.safeParse(req.body);
+
+        if (!parsedData.success) {
+            res.status(400).json({
+                error: "Validation failed",
+                issues: parsedData.error.format(),
+            });
+            return
+        }
+
+        const {email , token , newPassword} = parsedData.data;
+
+        let mechanic = await prisma.mechanic.findUnique({
+            where: { email },
+        });
+
+        if (!mechanic) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        const resetToken = await prisma.authToken.findUnique({
+            where: {
+                tokenType: 'reset-password',
+                userRole: 'Mechanic',
+                tokenValue: token
+            }
+        })
+
+        if (!resetToken) {
+            res.status(404).json({ error: "Token not found" });
+            return;
+        }
+
+        if(resetToken.tokenValue !== token){
+            res.status(400).json({ error: "Token not valid" });
+            return;
+        }
+
+        if (resetToken.expirationTime < new Date()) {
+            res.status(400).json({ error: "Token is expired" });
+            return;
+        }
+
+        const isMatch = await bcrypt.compare(newPassword, mechanic.password);
+        if (isMatch) {
+            res.status(400).json({ error: "Please insert a new password" });
+            return
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await prisma.mechanic.update({
+            where: {
+                mechanicId: mechanic.mechanicId,
+            },
+            data: {
+                password: hashedPassword,
+            },
+        });
+
+
+        await prisma.authToken.deleteMany({
+            where: {
+                userId: mechanic.mechanicId
+            },
+        });
+
+        res.json({
+            message: "Password resetted successfully!",
+        });
+        return
+
+    }catch(err){
+        console.error(err);
+        res.status(500).json({ error: "Internal server error!" });
+        return;
+    }
+
+})
+
+
 export default router
