@@ -12,12 +12,13 @@ import {
   generateVehicleInsightRecommendations,
 } from '../services/ai.service';
 import analyzeDocument, { analyzeDocumentInMemory } from '../services/ocr.service';
-import { AuthenticatedVehicleOwnerRequest, VehicleRegistrationData } from '../types';
+import { AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest, VehicleRegistrationData } from '../types';
 import axiosInstance from '../config/axios';
 import { VehicleBlockChainModel } from '../models/vehicle.model';
 import { calculateCompositeRating } from '../services/certificate.service';
 import { getDocumentHash } from '../services/hash.service';
 import dotenv from 'dotenv';
+import mechanicAuthMiddleware from '../middleware/mechanic.middleware';
 dotenv.config();
 
 const router: Router = express.Router();
@@ -660,7 +661,39 @@ router.get('/vehicle-insights', vehicleOwnerAuthMiddleware(), async (req: Authen
 });
 
 
+router.get('/search-vehicles', mechanicAuthMiddleware(), async (req: AuthenticatedMechanicRequest, res: Response) => {
 
+  try {
+    const { query } = req.query;
+    if (!query || typeof query !== 'string') {
+      res.status(400).json({ message: 'Query parameter is required.' });
+      return;
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+      where: {
+        vin: query
+      }
+    });
+
+    if (!vehicle) {
+      res.status(404).json({ message: 'Vehicle not found.' });
+      return;
+    }
+
+    res.status(200).json({
+      message: 'Vehicle found successfully',
+      vehicle,
+    });
+    return;
+
+  } catch (err) {
+    console.error('Error searching vehicle:', err);
+    res.status(500).json({ message: 'Internal server error' });
+    return;
+  }
+
+});
 
 
 
