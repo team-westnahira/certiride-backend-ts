@@ -489,36 +489,37 @@ router.post(
       const vehicleImage = req.files?.vehicleImage as fileUpload.UploadedFile;
 
       if (!file) {
-        res.status(400).json({ message: 'Vehicle Certification File is required' });
-        return;
+        res.status(400).json({ message: 'Vehicle Certification File not uploaded.' });
       }
+      else{
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedMimeTypes.includes(file.mimetype || '')) {
+          res
+            .status(400)
+            .json({ message: 'Invalid file type. Only JPEG, PNG, and GIF are allowed.' });
+          return;
+        }
 
-      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-      if (!allowedMimeTypes.includes(file.mimetype || '')) {
-        res
-          .status(400)
-          .json({ message: 'Invalid file type. Only JPEG, PNG, and GIF are allowed.' });
-        return;
-      }
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+          res.status(400).json({ message: 'Certificate file size exceeds 5MB limit.' });
+          return;
+        }
 
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        res.status(400).json({ message: 'Certificate file size exceeds 5MB limit.' });
-        return;
-      }
+        if (vehicleImage && vehicleImage.size > maxSize) {
+          res.status(400).json({ message: 'Vehicle image file size exceeds 5MB limit.' });
+          return;
+        }
 
-      if (vehicleImage && vehicleImage.size > maxSize) {
-        res.status(400).json({ message: 'Vehicle image file size exceeds 5MB limit.' });
-        return;
-      }
+        const extractedText = await analyzeDocumentInMemory(file.data);
+        console.log('extractedText:', extractedText);
+        const data = await extractVehicleCertificateDetailedData(extractedText.content);
 
-      const extractedText = await analyzeDocumentInMemory(file.data);
-      console.log('extractedText:', extractedText);
-      const data = await extractVehicleCertificateDetailedData(extractedText.content);
+        if (data.vin !== vin) {
+          res.status(400).json({ message: 'The extracted vehicle data does not match the provided VIN.' });
+          return;
+        }
 
-      if (data.vin !== vin) {
-        res.status(400).json({ message: 'The extracted vehicle data does not match the provided VIN.' });
-        return;
       }
 
       const imageUploadDir = path.join(__dirname, '../../uploads/vehicles/images');
