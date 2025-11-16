@@ -516,6 +516,19 @@ router.post('/add-record-mechanic', mechanicAuthMiddleware(), async (req: Authen
     return
   }
 
+  const owner = await prisma.vehicleOwner.findUnique({
+    where: {
+      id: vehicle?.ownerId,
+    }
+  })
+
+  if(!owner){
+    res.status(400).json({ message: "Vehicle owner not found!" });
+    return
+  }
+
+
+
   let filePath = '';
   let data;
 
@@ -617,7 +630,7 @@ router.post('/add-record-mechanic', mechanicAuthMiddleware(), async (req: Authen
 
     const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
     const blockchainResponse = await axiosInstance.get(
-      `/query/GetVehicle/${vehicle.vin}/${req.user?.nic + appedix}`
+      `/query/GetVehicle/${vehicle.vin}/${owner?.nic + appedix}`
     );
 
     const interactionData = blockchainResponse.data.data as VehicleBlockChainModel;
