@@ -65,10 +65,10 @@ router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:Authe
         return
     }
 
-    if ( new Date(interaction_date) > new Date()) {
-        res.status(400).json({ message: "Interaction date cannot be in the future" });
-        return
-    }
+    // if ( new Date(interaction_date) > new Date()) {
+    //     res.status(400).json({ message: "Interaction date cannot be in the future" });
+    //     return
+    // }
 
     if(latestVehicleInteractionData && latestVehicleInteractionData.status !== "closed"){
         res.status(400).json({ message: "Previous interaction is not closed" });
@@ -293,10 +293,10 @@ router.post('/self-add-interaction', vehicleOwnerAuthMiddleware(), async (req: A
         return;
     }
 
-    if (new Date(interaction_date) > new Date()) {
-        res.status(400).json({ message: "Interaction date cannot be in the future" });
-        return;
-    }
+    // if (new Date(interaction_date) > new Date()) {
+    //     res.status(400).json({ message: "Interaction date cannot be in the future" });
+    //     return;
+    // }
 
     if (latestVehicleInteractionData && latestVehicleInteractionData.status !== "closed") {
         res.status(400).json({ message: "Previous interaction is not closed" });
