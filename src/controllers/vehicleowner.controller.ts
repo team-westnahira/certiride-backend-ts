@@ -40,8 +40,9 @@ router.post("/share-history/generate-qr", vehicleOwnerAuthMiddleware() , async (
 
     const token = jwt.sign(payload, secret as Secret, { expiresIn } as SignOptions);
 
-    // Generate QR code as token (no need of url)
-    const qrData = await QRCode.toDataURL(token);
+    // generate PNG buffer and return as base64 (PNG)
+    const pngBuffer = await QRCode.toBuffer(token, { type: "png" });
+    const qrData = pngBuffer.toString("base64");
 
     res.status(200).json({
       success: true,
