@@ -70,10 +70,10 @@ router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:Authe
     //     return
     // }
 
-    if(latestVehicleInteractionData && latestVehicleInteractionData.status !== "closed"){
-        res.status(400).json({ message: "Previous interaction is not closed" });
-        return
-    }
+    // if(latestVehicleInteractionData && latestVehicleInteractionData.status !== "closed"){
+    //     res.status(400).json({ message: "Previous interaction is not closed" });
+    //     return
+    // }
 
     const uuid = randomUUID()
 
@@ -298,10 +298,10 @@ router.post('/self-add-interaction', vehicleOwnerAuthMiddleware(), async (req: A
     //     return;
     // }
 
-    if (latestVehicleInteractionData && latestVehicleInteractionData.status !== "closed") {
-        res.status(400).json({ message: "Previous interaction is not closed" });
-        return;
-    }
+    // if (latestVehicleInteractionData && latestVehicleInteractionData.status !== "closed") {
+    //     res.status(400).json({ message: "Previous interaction is not closed" });
+    //     return;
+    // }
 
     const uuid = randomUUID();
 
