@@ -549,9 +549,9 @@ router.post(
       await prisma.vehicle.update({
         where: { vin, ownerId: req.user.id },
         data: {
-          manufacture: data.manufacture === '' ? vehicle.manufacture : data.manufacture,
-          model: data.model === '' ? vehicle.model : data.model,
-          year: +data.year === 0 ? vehicle.year : +data.year,
+          manufacture: parsedData.data.manufacture === '' ? vehicle.manufacture : parsedData.data.manufacture,
+          model: parsedData.data.model === '' ? vehicle.model : parsedData.data.model,
+          year: +parsedData.data.year === 0 ? vehicle.year : +parsedData.data.year,
         },
       });
 
@@ -560,13 +560,13 @@ router.post(
         args: [
           vin,
           JSON.stringify({
-            manufacture: data.manufacture === '' ? vehicle.manufacture : data.manufacture,
-            model: data.model === '' ? vehicle.model : data.model,
-            year: +data.year === 0 ? vehicle.year : +data.year,
-            color: data.color,
-            engineCapacity: data.engineCapacity,
-            province: data.province,
-            fuelType: data.fuelType,
+            manufacture: parsedData.data.manufacture === '' ? vehicle.manufacture : parsedData.data.manufacture,
+            model: parsedData.data.model === '' ? vehicle.model : parsedData.data.model,
+            year: +parsedData.data.year === 0 ? vehicle.year : +parsedData.data.year,
+            color: parsedData.data.color,
+            engineCapacity: parsedData.data.engineCapacity,
+            province: parsedData.data.province,
+            fuelType: parsedData.data.fuelType,
             initialMilage: vehicle.initialMilage,
           })
         ],
