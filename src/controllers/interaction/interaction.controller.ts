@@ -60,10 +60,10 @@ router.post('/add-new-interaction' , mechanicAuthMiddleware() , async (req:Authe
 
     const latestVehicleInteractionData = vehicleData.interaction[vehicleData.interaction.length - 1];
 
-    if (latestVehicleInteractionData && latestVehicleInteractionData.mileage > mileage) {
-        res.status(400).json({ message: "Mileage cannot be less than the previous one" });
-        return
-    }
+    // if (latestVehicleInteractionData && latestVehicleInteractionData.mileage > mileage) {
+    //     res.status(400).json({ message: "Mileage cannot be less than the previous one" });
+    //     return
+    // }
 
     // if ( new Date(interaction_date) > new Date()) {
     //     res.status(400).json({ message: "Interaction date cannot be in the future" });
@@ -288,10 +288,10 @@ router.post('/self-add-interaction', vehicleOwnerAuthMiddleware(), async (req: A
     const vehicleData = vehicleChainData.data.data as VehicleBlockChainModel;
     const latestVehicleInteractionData = vehicleData.interaction[vehicleData.interaction.length - 1];
 
-    if (latestVehicleInteractionData && latestVehicleInteractionData.mileage > mileage) {
-        res.status(400).json({ message: "Mileage cannot be less than the previous one" });
-        return;
-    }
+    // if (latestVehicleInteractionData && latestVehicleInteractionData.mileage > mileage) {
+    //     res.status(400).json({ message: "Mileage cannot be less than the previous one" });
+    //     return;
+    // }
 
     // if (new Date(interaction_date) > new Date()) {
     //     res.status(400).json({ message: "Interaction date cannot be in the future" });
