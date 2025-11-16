@@ -647,7 +647,6 @@ router.post('/add-record-mechanic', mechanicAuthMiddleware(), async (req: Authen
         serviceRecordObject.record_id = randomUUID()
         serviceRecordObject.cost = Number(serviceRecordObject.cost)
         serviceRecordObject.service_date = new Date(invoiceData.invoice_date).toISOString()
-        serviceRecordObject.description = description;
         serviceRecordObject.attachments = [
           {
             attachment_id: randomUUID(),
@@ -673,7 +672,6 @@ router.post('/add-record-mechanic', mechanicAuthMiddleware(), async (req: Authen
         accidentRecordObject.cost = Number(accidentRecordObject.cost);
         accidentRecordObject.accident_date = new Date(record.accident_date).toISOString();
         accidentRecordObject.record_id = randomUUID();
-        accidentRecordObject.description = description;
         accidentRecordObject.attachments = [
           {
             attachment_id: randomUUID(),
@@ -698,7 +696,6 @@ router.post('/add-record-mechanic', mechanicAuthMiddleware(), async (req: Authen
         troubleshootRecordObject.record_id = randomUUID();
         troubleshootRecordObject.mechanic_id = req.user?.mechanicId + '';
         troubleshootRecordObject.repair_cost = Number(troubleshootRecordObject.repair_cost);
-        troubleshootRecordObject.repair_description = description;
         troubleshootRecordObject.attachments = [
           {
             attachment_id: randomUUID(),
