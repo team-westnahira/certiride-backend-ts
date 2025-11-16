@@ -75,9 +75,9 @@ export const commonInteractionChecker = async (req:AuthenticatedMechanicRequest,
         throw new Error("Interaction is not open");
     }
 
-    if(new Date() < new Date(interaction.interaction_date)) {
-        throw new Error("inteaction date cannot be in the future");
-    }
+    // if(new Date() < new Date(interaction.interaction_date)) {
+    //     throw new Error("inteaction date cannot be in the future");
+    // }
 
     if(interaction.mechanic_id !== req.user.mechanicId+'') {
         throw new Error("You are not authorized to add diagnostic report to this interaction");
@@ -120,10 +120,9 @@ export const commonInteractionCheckerForVehicleOwner = async(req:AuthenticatedVe
         throw new Error("Interaction is not open");
     }
 
-    if(new Date() < new Date(interaction.interaction_date)) {
-        throw new Error("Interaction date cannot be in the future");
-    }
-
+    // if(new Date() < new Date(interaction.interaction_date)) {
+    //     throw new Error("Interaction date cannot be in the future");
+    // }
 
     return {interaction , vehicleChainData , vehicleOwner}
 }
