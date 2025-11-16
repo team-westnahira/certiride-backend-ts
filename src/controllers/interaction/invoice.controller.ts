@@ -464,7 +464,6 @@ router.post('/self-add-invoice', vehicleOwnerAuthMiddleware(), async (req: Authe
 });
 
 
-
 router.post('/add-record-mechanic', mechanicAuthMiddleware(), async (req: AuthenticatedMechanicRequest, res: Response) => {
   if (!req.headers["content-type"]?.includes("multipart/form-data")) {
     res.status(400).json({ message: "Invalid content type. Use multipart/form-data." });
