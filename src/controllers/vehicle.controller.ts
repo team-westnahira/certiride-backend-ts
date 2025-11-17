@@ -184,7 +184,7 @@ router.post(
           await axiosInstance.post('/invoke', {
             fn: 'createVehicle',
             args: [
-              vehicleCertificate.chassis_number,
+              vin,
               req.user?.id + '',
               newVehicle.manufacture,
               newVehicle.model,
