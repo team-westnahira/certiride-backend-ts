@@ -1,9 +1,11 @@
 import express, { Response } from "express";
 import prisma from "../config/prisma";
 import adminAuthMiddleware from "../middleware/admin.middleware";
-import { AuthenticatedAdminRequest } from "../types";
+import { AuthenticatedAdminRequest, AuthenticatedVehicleOwnerRequest } from "../types";
 import moment from "moment";
 import { Vehicle } from "@prisma/client";
+import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
+import { z } from "zod";
 
 const router = express.Router();
 
@@ -509,6 +511,46 @@ router.get("/search-vehicles", adminAuthMiddleware("Moderator"), async (req: Aut
 
 
 
+router.post("/edit-admin", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res: Response) => {
+  try {
+    const adminId = Number(req.body.adminId ?? req.query.adminId);
+    if (isNaN(adminId)) {
+      res.status(400).json({ success: false, message: "adminId is required and must be a number" });
+      return;
+    }
+
+    const { name, email, role, isActive } = req.body;
+    const updateData: any = {};
+
+    if (typeof name === "string" && name.trim().length) updateData.name = name.trim();
+    if (typeof email === "string" && email.trim()) updateData.email = email.trim().toLowerCase();
+    if (typeof role === "string" && role.trim()) updateData.role = role.trim();
+    if (typeof isActive !== "undefined") updateData.isActive = Boolean(isActive);
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ success: false, message: "No valid fields provided to update" });
+      return;
+    }
+
+    const found = await prisma.admin.findUnique({ where: { adminId } });
+    if (!found) {
+      res.status(404).json({ success: false, message: "Admin not found" });
+      return;
+    }
+
+    const updated = await prisma.admin.update({
+      where: { adminId },
+      data: updateData,
+    });
+
+    res.status(200).json({ success: true, admin: updated });
+    return;
+  } catch (error) {
+    console.error("Error updating admin:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+    return;
+  }
+});
 
 
 export default router;
