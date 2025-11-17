@@ -418,7 +418,6 @@ router.get("/get-all-vehicles" , adminAuthMiddleware('Moderator'), async (req: A
 });
 
 
-
 router.get("/search-vehicles", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res: Response) => {
     const q = (req.query.q as string) || "";
     const page = parseInt(req.query.page as string) || 1;
@@ -512,7 +511,6 @@ router.get("/search-vehicles", adminAuthMiddleware("Moderator"), async (req: Aut
 );
 
 
-
 router.post("/edit-admin", adminAuthMiddleware("Admin"), async (req: AuthenticatedAdminRequest, res: Response) => {
   try {
     const adminId = Number(req.body.adminId ?? req.query.adminId);
@@ -555,7 +553,7 @@ router.post("/edit-admin", adminAuthMiddleware("Admin"), async (req: Authenticat
 });
 
 
-router.post("/reset-password", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res: Response) => {
+router.post("/reset-password", adminAuthMiddleware("Admin"), async (req: AuthenticatedAdminRequest, res: Response) => {
   try {
     const resetSchema = z
       .object({

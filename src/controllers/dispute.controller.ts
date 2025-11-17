@@ -2,11 +2,12 @@ import express from "express";
 import { z } from "zod";
 import prisma from "../config/prisma";
 import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
-import { AuthenticatedAdminRequest, AuthenticatedVehicleOwnerRequest } from "../types";
+import { AuthenticatedAdminRequest, AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest } from "../types";
 import axiosInstance from "../config/axios";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
 import { VehicleInteractionBlockChainModel } from "../models/interaction.model";
 import adminAuthMiddleware from "../middleware/admin.middleware";
+import mechanicAuthMiddleware from "../middleware/mechanic.middleware";
 
 const router = express.Router();
 
@@ -145,5 +146,79 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
     return;
   }
 });
+
+
+router.post("/mechanic-review", mechanicAuthMiddleware(), async (req: AuthenticatedMechanicRequest, res) => {
+  try {
+    const schema = z.object({
+      disputeId: z.preprocess((v) => Number(v), z.number().int().positive()),
+      action: z.enum(["acknowledge", "resolve", "reopen"]).optional(),
+      remarks: z.string().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Validation failed", issues: parsed.error.format() });
+      return;
+    }
+
+    const { disputeId, action, remarks } = parsed.data;
+    const mechanicId = (req.user as any)?.mechanicId ?? (req.user as any)?.id;
+    if (!mechanicId) {
+      res.status(403).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+
+    const dispute = await prisma.dispute.findUnique({ where: { disputeId } });
+    if (!dispute) {
+      res.status(404).json({ success: false, message: "Dispute not found" });
+      return;
+    }
+
+    if (dispute.mechanicId && dispute.mechanicId !== mechanicId) {
+      res.status(403).json({ success: false, message: "You are not assigned to this dispute" });
+      return;
+    }
+
+    const updateData: any = {
+      reviewedBy: mechanicId,
+    };
+
+    if (remarks) updateData.mechanicRemarks = remarks;
+    if (action === "resolve") {
+      updateData.status = true;
+      updateData.resolvedAt = new Date();
+    } else if (action === "reopen") {
+      updateData.status = false;
+      updateData.resolvedAt = null;
+    }
+
+    const updated = await prisma.dispute.update({
+      where: { disputeId },
+      data: updateData,
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          eventType: "dispute_mechanic_review",
+          content: JSON.stringify({ disputeId, action: action ?? "acknowledge", remarks: remarks ?? null }),
+          date: new Date(),
+          userId: mechanicId,
+        },
+      });
+    } catch (e) {
+      console.error("Failed to create audit log for mechanic review:", e);
+    }
+
+    res.status(200).json({ success: true, dispute: updated });
+    return;
+  } catch (error) {
+    console.error("Error in mechanic review:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+    return;
+  }
+});
+
 
 export default router;
