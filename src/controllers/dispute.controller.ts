@@ -46,19 +46,19 @@ router.post("/create", vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVe
 
     // Create dispute. Store diffs as JSON (stringify if your schema uses a string column).
     // Adjust the 'diffs' assignment depending on your Prisma schema (Json vs String).
-    const dispute = await prisma.dispute.create({
-      data: {
-        vehicleId,
-        ownerId: req.user.id,
-        serviceRecordId,
-        discription,
-        status: true,
-        diffs: diffs ?? null,
-        createdAt: new Date(),
-      },
-    });
+    // const dispute = await prisma.dispute.create({
+    //   data: {
+    //     vehicleId,
+    //     ownerId: req.user.id,
+    //     // serviceRecordId,
+    //     discription,
+    //     status: true,
+    //     // diffs: diffs ?? null,
+    //     createdAt: new Date(),
+    //   },
+    // });
 
-    res.status(201).json({ success: true, dispute });
+    res.status(201).json({ success: true });
     return;
   } catch (error) {
     console.error("Error creating dispute:", error);
