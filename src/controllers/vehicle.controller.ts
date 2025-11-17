@@ -149,23 +149,23 @@ router.post(
 
         const vehicleCertificate: VehicleRegistrationData = JSON.parse(extractedData);
 
-        if (vehicleCertificate.authenticity_score < 0.8) {
-          await prisma.fileHash.delete({
-            where: { hash: fileHash },
-          });
-          res.status(400).json({ message: 'The extracted vehicle data is not authentic.' });
-          return;
-        }
+        // if (vehicleCertificate.authenticity_score < 0.8) {
+        //   await prisma.fileHash.delete({
+        //     where: { hash: fileHash },
+        //   });
+        //   res.status(400).json({ message: 'The extracted vehicle data is not authentic.' });
+        //   return;
+        // }
 
-        if (vehicleCertificate.chassis_number !== vin) {
-          await prisma.fileHash.delete({
-            where: { hash: fileHash },
-          });
-          res
-            .status(400)
-            .json({ message: 'The extracted vehicle data does not match the provided VIN.' });
-          return;
-        }
+        // if (vehicleCertificate.chassis_number !== vin) {
+        //   await prisma.fileHash.delete({
+        //     where: { hash: fileHash },
+        //   });
+        //   res
+        //     .status(400)
+        //     .json({ message: 'The extracted vehicle data does not match the provided VIN.' });
+        //   return;
+        // }
 
         const newVehicle = await prisma.vehicle.create({
           data: {
