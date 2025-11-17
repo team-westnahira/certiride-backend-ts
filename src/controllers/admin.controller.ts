@@ -6,6 +6,8 @@ import moment from "moment";
 import { Vehicle } from "@prisma/client";
 import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
+
 
 const router = express.Router();
 
@@ -511,7 +513,7 @@ router.get("/search-vehicles", adminAuthMiddleware("Moderator"), async (req: Aut
 
 
 
-router.post("/edit-admin", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res: Response) => {
+router.post("/edit-admin", adminAuthMiddleware("Admin"), async (req: AuthenticatedAdminRequest, res: Response) => {
   try {
     const adminId = Number(req.body.adminId ?? req.query.adminId);
     if (isNaN(adminId)) {
@@ -547,6 +549,57 @@ router.post("/edit-admin", adminAuthMiddleware("Moderator"), async (req: Authent
     return;
   } catch (error) {
     console.error("Error updating admin:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+    return;
+  }
+});
+
+
+router.post("/reset-password", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res: Response) => {
+  try {
+    const resetSchema = z
+      .object({
+        adminId: z.preprocess((v) => Number(v), z.number().int().positive()).optional(),
+        email: z.string().email().optional(),
+        newPassword: z.string().min(6, "Password must be at least 6 characters"),
+      })
+      .refine((data) => data.adminId !== undefined || data.email !== undefined, {
+        message: "Either adminId or email is required",
+        path: ["adminId", "email"],
+      });
+
+    const parsed = resetSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Validation failed", issues: parsed.error.format() });
+      return;
+    }
+
+    const { adminId, email, newPassword } = parsed.data;
+
+    let adminRecord = null;
+    if (adminId !== undefined) {
+      adminRecord = await prisma.admin.findUnique({ where: { adminId } });
+    } else if (email) {
+      adminRecord = await prisma.admin.findUnique({ where: { email } });
+    }
+
+    if (!adminRecord) {
+      res.status(404).json({ success: false, message: "Admin not found" });
+      return;
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    const updated = await prisma.admin.update({
+      where: { adminId: adminRecord.adminId },
+      data: { password: hashed },
+      select: { adminId: true, name: true, email: true, role: true, isActive: true },
+    });
+
+    res.status(200).json({ success: true, message: "Password reset successfully", admin: updated });
+    return;
+  } catch (error) {
+    console.error("Error resetting admin password:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
     return;
   }
