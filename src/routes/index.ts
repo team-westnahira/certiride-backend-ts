@@ -36,5 +36,6 @@ router.use('/certificates', require('../controllers/certificate.controller').def
 router.use('/notification', notificationController);
 router.use('/ownership', require('../controllers/ownership.controller').default);
 router.use('/admin', require('../controllers/admin.controller').default);
+router.use('/dispute', require('../controllers/dispute.controller').default);
 
 export default router;
