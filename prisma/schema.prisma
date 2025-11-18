@@ -108,7 +108,7 @@ model Dispute {
   mechanicId  Int
   status      Boolean
   reviewedBy  Int
-  discription String
+  discription String   @db.Text
   createdAt   DateTime @default(now())
   vehicleId  Int
 }

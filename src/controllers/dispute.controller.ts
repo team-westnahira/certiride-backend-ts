@@ -221,4 +221,114 @@ router.post("/mechanic-review", mechanicAuthMiddleware(), async (req: Authentica
 });
 
 
+router.get("/get-all", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const status = (req.query.status as string) || undefined;
+    const vehicleId = req.query.vehicleId ? Number(req.query.vehicleId) : undefined;
+    const ownerId = req.query.ownerId ? Number(req.query.ownerId) : undefined;
+    const mechanicId = req.query.mechanicId ? Number(req.query.mechanicId) : undefined;
+    const q = (req.query.q as string) || "";
+
+    const whereBase: any = {};
+    if (typeof status !== "undefined") {
+      // adapt based on your schema: here assume boolean status (true = resolved)
+      if (status === "open") whereBase.status = false;
+      else if (status === "closed" || status === "resolved") whereBase.status = true;
+      else if (status === "true" || status === "false") whereBase.status = status === "true";
+    }
+    if (!isNaN(Number(vehicleId))) whereBase.vehicleId = vehicleId;
+    if (!isNaN(Number(ownerId))) whereBase.ownerId = ownerId;
+    if (!isNaN(Number(mechanicId))) whereBase.mechanicId = mechanicId;
+
+    const where = q
+      ? {
+          ...whereBase,
+          OR: [
+            { discription: { contains: q, mode: "insensitive" } },
+            { disputeId: !isNaN(Number(q)) ? Number(q) : undefined },
+          ].filter(Boolean),
+        }
+      : whereBase;
+
+    const [disputes, total] = await Promise.all([
+      prisma.dispute.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.dispute.count({ where }),
+    ]);
+
+    const vehicleIds = Array.from(new Set(disputes.map(d => d.vehicleId).filter(Boolean)));
+    const ownerIds = Array.from(new Set(disputes.map(d => d.ownerId).filter(Boolean)));
+    const mechanicIds = Array.from(new Set(disputes.map(d => d.mechanicId).filter(Boolean)));
+    const reviewerIds = Array.from(new Set(disputes.map(d => d.reviewedBy).filter(Boolean)));
+
+    const [vehicles, owners, mechanics, reviewers] = await Promise.all([
+      vehicleIds.length
+        ? prisma.vehicle.findMany({
+            where: { vehicleId: { in: vehicleIds } },
+            select: { vehicleId: true, vin: true, manufacture: true, model: true, year: true },
+          })
+        : Promise.resolve([]),
+      ownerIds.length
+        ? prisma.vehicleOwner.findMany({
+            where: { id: { in: ownerIds } },
+            select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+          })
+        : Promise.resolve([]),
+      mechanicIds.length
+        ? prisma.mechanic.findMany({
+            where: { mechanicId: { in: mechanicIds } },
+            select: { mechanicId: true, name: true, email: true, phone: true },
+          })
+        : Promise.resolve([]),
+      reviewerIds.length
+        ? prisma.admin.findMany({
+            where: { adminId: { in: reviewerIds } },
+            select: { adminId: true, name: true, email: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const vehicleMap = Object.fromEntries(vehicles.map(v => [v.vehicleId, v]));
+    const ownerMap = Object.fromEntries(owners.map(o => [o.id, o]));
+    const mechanicMap = Object.fromEntries(mechanics.map(m => [m.mechanicId, m]));
+    const reviewerMap = Object.fromEntries(reviewers.map(r => [r.adminId, r]));
+
+    const results = disputes.map(d => ({
+      ...d,
+      vehicle: d.vehicleId ? vehicleMap[d.vehicleId] || null : null,
+      owner: d.ownerId ? ownerMap[d.ownerId] || null : null,
+      mechanic: d.mechanicId ? mechanicMap[d.mechanicId] || null : null,
+      reviewedByAdmin: d.reviewedBy ? reviewerMap[d.reviewedBy] || null : null,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: results,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+    return;
+  } catch (error) {
+    console.error("Error fetching all disputes:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+    return;
+  }
+});
+
+
+
+
+
 export default router;
