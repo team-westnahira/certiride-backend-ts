@@ -15,7 +15,7 @@ router.post("/create", vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVe
   try {
     const payloadSchema = z.object({
       vehicleId: z.preprocess((v) => Number(v), z.number().int().positive()),
-      serviceRecordId: z.preprocess((v) => Number(v), z.number().int().positive()),
+      serviceRecordId: z.string().min(1),
       interactionId: z.string().min(1),
       discription: z.string().min(5),
       diffs: z.array(z.any()).optional(),
