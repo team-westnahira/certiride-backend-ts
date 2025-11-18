@@ -140,26 +140,30 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
       return
     }
 
-    const updateData: any = {
-      reviewedBy: adminId,
-    };
-
     if (action === 'approve') {
-      updateData.status = true;
-      updateData.resolvedAt = new Date();
+
+      await prisma.dispute.update({
+        where: { disputeId },
+        data: {
+          status: true,
+          reviewedBy: adminId,
+        },
+      });
+
     } else if (action === 'reject') {
-      updateData.status = false;
-      updateData.resolvedAt = new Date();
+
+      await prisma.dispute.update({
+        where: { disputeId },
+        data: {
+          status: false,
+          reviewedBy: adminId,
+        },
+      });
+
     }
 
-    const updated = await prisma.dispute.update({
-      where: { disputeId },
-      data: updateData,
-    });
-
-
     if(action === 'reject'){
-      res.status(200).json({ success: true, dispute: updated });
+      res.status(200).json({ success: true});
       return;
     }
 
@@ -205,7 +209,7 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
         username: vehicleOwner.nic + appedix,
     });
 
-    res.status(200).json({ success: true, dispute: updated });
+    res.status(200).json({ success: true });
     return;
   } catch (error) {
     console.error("Error in admin review:", error);
