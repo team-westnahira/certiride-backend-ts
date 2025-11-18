@@ -79,6 +79,7 @@ router.post("/create", vehicleOwnerAuthMiddleware(), async (req: AuthenticatedVe
         ownerId: req.user.id,
         mechanicId: +interactionData.mechanic_id,
         status: false,
+        mechanicApproval: 'open', 
         reviewedBy: 0,
         discription,
         createdAt: new Date(),
@@ -235,7 +236,6 @@ router.get("/get-all", adminAuthMiddleware("Moderator"), async (req: Authenticat
 
     const whereBase: any = {};
     if (typeof status !== "undefined") {
-      // adapt based on your schema: here assume boolean status (true = resolved)
       if (status === "open") whereBase.status = false;
       else if (status === "closed" || status === "resolved") whereBase.status = true;
       else if (status === "true" || status === "false") whereBase.status = status === "true";
