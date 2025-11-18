@@ -19,15 +19,7 @@ router.get("/disputes", mechanicAuthMiddleware(), async (req: AuthenticatedMecha
         orderBy: { createdAt: "desc" },
         where: {
           mechanicId: mechanicId,
-        },
-        select: {
-          disputeId: true,
-          discription: true,
-          status: true,
-          vehicleId: true,
-          ownerId: true,
-          createdAt: true,
-        },
+        }
       }),
       prisma.dispute.count({
         where: {
