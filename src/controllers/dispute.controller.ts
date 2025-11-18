@@ -148,12 +148,11 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
   }
 });
 
-
 router.post("/mechanic-review", mechanicAuthMiddleware(), async (req: AuthenticatedMechanicRequest, res) => {
   try {
     const schema = z.object({
       disputeId: z.preprocess((v) => Number(v), z.number().int().positive()),
-      action: z.enum(["acknowledge", "resolve", "reopen"]).optional(),
+      action: z.enum(["accept", "reject"]).optional(),
       remarks: z.string().optional(),
     });
 
@@ -181,29 +180,19 @@ router.post("/mechanic-review", mechanicAuthMiddleware(), async (req: Authentica
       return;
     }
 
-    const updateData: any = {
-      reviewedBy: mechanicId,
-    };
-
-    if (remarks) updateData.mechanicRemarks = remarks;
-    if (action === "resolve") {
-      updateData.status = true;
-      updateData.resolvedAt = new Date();
-    } else if (action === "reopen") {
-      updateData.status = false;
-      updateData.resolvedAt = null;
-    }
 
     const updated = await prisma.dispute.update({
       where: { disputeId },
-      data: updateData,
+      data: {
+        mechanicApproval: action,
+      },
     });
 
     try {
       await prisma.auditLog.create({
         data: {
           eventType: "dispute_mechanic_review",
-          content: JSON.stringify({ disputeId, action: action ?? "acknowledge", remarks: remarks ?? null }),
+          content: JSON.stringify({ disputeId, action: action ?? "accept", remarks: remarks ?? null }),
           date: new Date(),
           userId: mechanicId,
         },
@@ -220,7 +209,6 @@ router.post("/mechanic-review", mechanicAuthMiddleware(), async (req: Authentica
     return;
   }
 });
-
 
 router.get("/get-all", adminAuthMiddleware("Moderator"), async (req: AuthenticatedAdminRequest, res) => {
   try {
@@ -309,6 +297,10 @@ router.get("/get-all", adminAuthMiddleware("Moderator"), async (req: Authenticat
       reviewedByAdmin: d.reviewedBy ? reviewerMap[d.reviewedBy] || null : null,
     }));
 
+    const totalDisputes = total;
+    const totalResolved = await prisma.dispute.count({ where: { ...where, status: true } });
+    const totalOpen = totalDisputes - totalResolved;
+
     res.status(200).json({
       success: true,
       data: results,
@@ -318,6 +310,9 @@ router.get("/get-all", adminAuthMiddleware("Moderator"), async (req: Authenticat
         limit,
         totalPages: Math.ceil(total / limit),
       },
+      totalDisputes,
+      totalResolved,
+      totalOpen,
     });
     return;
   } catch (error) {
@@ -326,9 +321,6 @@ router.get("/get-all", adminAuthMiddleware("Moderator"), async (req: Authenticat
     return;
   }
 });
-
-
-
 
 
 export default router;
