@@ -99,7 +99,7 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
   try {
     const payloadSchema = z.object({
       disputeId: z.preprocess((v) => Number(v), z.number().int().positive()),
-      action: z.enum(['close', 'reopen']).optional(),
+      action: z.enum(['approve', 'reject']).optional(),
     });
 
     const parsed = payloadSchema.safeParse(req.body);
@@ -126,18 +126,20 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
       reviewedBy: adminId,
     };
 
-    if (action === 'close') {
+    if (action === 'approve') {
       updateData.status = true;
       updateData.resolvedAt = new Date();
-    } else if (action === 'reopen') {
+    } else if (action === 'reject') {
       updateData.status = false;
-      updateData.resolvedAt = null;
+      updateData.resolvedAt = new Date();
     }
 
     const updated = await prisma.dispute.update({
       where: { disputeId },
       data: updateData,
     });
+
+    // call blockchain API to finalize dispute if approved
 
     res.status(200).json({ success: true, dispute: updated });
     return;
