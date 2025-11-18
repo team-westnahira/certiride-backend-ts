@@ -121,3 +121,10 @@ export type VehicleHealthReport = {
   tips: Tip[];
 };
 
+export type DisputeDescription = {
+  type: string,
+  details: string,
+  mileage: number,
+  cost: number,
+  interactionId: string,
+}

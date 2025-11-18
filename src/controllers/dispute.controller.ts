@@ -2,10 +2,10 @@ import express from "express";
 import { z } from "zod";
 import prisma from "../config/prisma";
 import vehicleOwnerAuthMiddleware from "../middleware/vehicleOwner.middleware";
-import { AuthenticatedAdminRequest, AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest } from "../types";
+import { AuthenticatedAdminRequest, AuthenticatedMechanicRequest, AuthenticatedVehicleOwnerRequest, DisputeDescription } from "../types";
 import axiosInstance from "../config/axios";
 import { VehicleBlockChainModel } from "../models/vehicle.model";
-import { VehicleInteractionBlockChainModel } from "../models/interaction.model";
+import { ServiceRecordBlockChainModel, VehicleInteractionBlockChainModel } from "../models/interaction.model";
 import adminAuthMiddleware from "../middleware/admin.middleware";
 import mechanicAuthMiddleware from "../middleware/mechanic.middleware";
 
@@ -122,6 +122,24 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
       return;
     }
 
+    const vehicleOwner = await prisma.vehicleOwner.findUnique({
+      where: { id: dispute.ownerId },
+    });
+    
+    if(!vehicleOwner){
+      res.status(404).json({ success: false, message: "Vehicle owner not found" });
+      return;
+    }
+
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { vehicleId: dispute.vehicleId },
+    });
+
+    if (!vehicle){
+      res.status(404).json({ success: false, message: "Vehicle not found" });
+      return
+    }
+
     const updateData: any = {
       reviewedBy: adminId,
     };
@@ -139,7 +157,53 @@ router.post('/admin-review', adminAuthMiddleware('Moderator') , async (req:Authe
       data: updateData,
     });
 
+
+    if(action === 'reject'){
+      res.status(200).json({ success: true, dispute: updated });
+      return;
+    }
+
+    const discription = JSON.parse(dispute.discription) as DisputeDescription;
+    
+    const appedix = process.env.ENV ? (process.env.ENV === 'dev' ? '_test' : '') : '';
+    const blockchainResponse = await axiosInstance.get(
+      `/query/GetVehicle/${vehicle?.vin}/${vehicleOwner.nic + appedix}`
+    );
+    
+    const fullDetails = blockchainResponse.data.data as VehicleBlockChainModel;
+    let interactionData: VehicleInteractionBlockChainModel | null = null;
+    let serviceRecord: ServiceRecordBlockChainModel | null = null;
+
+    for (let i = 0; i < fullDetails.interaction.length; i++) {
+      if (fullDetails.interaction[i].interaction_id === discription.interactionId) {
+        interactionData = fullDetails.interaction[i];
+        serviceRecord = fullDetails.interaction[i].service_record;
+        break;
+      }
+    }
+
+    if (!serviceRecord) {
+      res.status(404).json({ success: false, message: "Service record not found" });
+      return;
+    }
+
+    const newRecord = serviceRecord;
+    newRecord.cost = discription.cost;
+    newRecord.mileage = discription.mileage;
+    newRecord.description = discription.details;
+
     // call blockchain API to finalize dispute if approved
+    await axiosInstance.post('/invoke', {
+        fn: 'UpdateServiceRecord',
+        args: [
+            vehicle.vin,                 
+            interactionData?.interaction_id,               
+            interactionData?.service_record?.record_id,
+            'service',
+            JSON.stringify(newRecord)
+        ],
+        username: vehicleOwner.nic + appedix,
+    });
 
     res.status(200).json({ success: true, dispute: updated });
     return;
